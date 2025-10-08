@@ -1,13 +1,5 @@
-// ============================================================================
-// AI SYSTEM PROMPTS
-// Pre-defined prompts for AI assistant interactions
-// ============================================================================
+import { Medication } from "../types";
 
-import { Medication, UserPreferences } from "../types";
-
-/**
- * Main system prompt for the AI assistant
- */
 export const MAIN_SYSTEM_PROMPT = `You are MediCare AI, a compassionate and patient medication assistant designed specifically for elderly users and people with visual impairments.
 
 YOUR ROLE:
@@ -44,9 +36,6 @@ SAFETY RULES:
 - Immediately escalate serious concerns to emergency contacts
 - Remind users to consult their doctor for medical decisions`;
 
-/**
- * Generate context-aware system prompt
- */
 export const generateContextPrompt = (context: {
   userName?: string;
   age?: number;
@@ -74,46 +63,6 @@ ${context.recentAdherence !== undefined ? `- Recent Adherence: ${context.recentA
 Respond naturally to the user's needs while considering this context.`;
 };
 
-/**
- * Intent classification prompt
- */
-export const INTENT_CLASSIFICATION_PROMPT = `Analyze the user's message and identify their intent. Choose from these actions:
-
-MEDICATION MANAGEMENT:
-- ADD_MEDICATION: User wants to add a new medication
-- UPDATE_MEDICATION: User wants to modify existing medication
-- DELETE_MEDICATION: User wants to remove a medication
-
-DOSE TRACKING:
-- MARK_TAKEN: User took or wants to mark a dose as taken
-- SKIP_DOSE: User wants to skip a scheduled dose
-- SNOOZE_REMINDER: User wants to postpone a reminder
-
-QUERIES:
-- QUERY_SCHEDULE: User asks about their medication schedule
-- QUERY_INTERACTIONS: User asks about drug interactions
-- QUERY_SIDE_EFFECTS: User asks about side effects
-- QUERY_MEDICATION_INFO: User asks for information about a medication
-
-ADHERENCE:
-- GET_ADHERENCE_REPORT: User wants to see their adherence statistics
-- GET_INSIGHTS: User wants AI insights and suggestions
-
-EMERGENCY:
-- REPORT_SIDE_EFFECT: User is experiencing adverse reactions
-- REQUEST_HELP: User needs help or assistance
-- CALL_EMERGENCY: Serious medical emergency
-
-OTHER:
-- GENERAL_QUESTION: General health or medication question
-- CASUAL_CHAT: Casual conversation
-- GREETING: User is greeting you
-
-Extract relevant entities (medication names, times, dosages, etc.) and provide confidence score.`;
-
-/**
- * Drug interaction check prompt
- */
 export const DRUG_INTERACTION_PROMPT = (medications: string[]): string => {
   return `As a pharmacology expert, analyze potential drug interactions between these medications:
 
@@ -136,9 +85,6 @@ Provide a JSON response with:
 Use SIMPLE language that elderly users can understand. Focus on PRACTICAL advice.`;
 };
 
-/**
- * Medication information prompt
- */
 export const MEDICATION_INFO_PROMPT = (medicationName: string): string => {
   return `Provide comprehensive but easy-to-understand information about: ${medicationName}
 
@@ -195,9 +141,6 @@ Provide a JSON response with:
 Be WARM, SUPPORTIVE, and CONSTRUCTIVE. Focus on PROGRESS and PRACTICAL help.`;
 };
 
-/**
- * Error handling prompt
- */
 export const ERROR_HANDLING_PROMPT = `The system encountered an error processing the request. Generate a friendly, helpful error message that:
 
 1. Apologizes for the confusion
@@ -207,9 +150,6 @@ export const ERROR_HANDLING_PROMPT = `The system encountered an error processing
 
 Keep it SHORT and SIMPLE.`;
 
-/**
- * Confirmation prompt
- */
 export const generateConfirmationPrompt = (action: string, details: any): string => {
   return `Generate a natural confirmation message for this action:
 
@@ -225,9 +165,6 @@ The confirmation should:
 Keep it concise (2-3 sentences max).`;
 };
 
-/**
- * Encouragement messages
- */
 export const ENCOURAGEMENT_MESSAGES = [
   "Great job staying on track with your medications!",
   "You're doing wonderfully! Keep up the good work.",
@@ -239,9 +176,6 @@ export const ENCOURAGEMENT_MESSAGES = [
   "You're doing fantastic! Your health is in good hands - yours!",
 ];
 
-/**
- * Get random encouragement message
- */
 export const getEncouragementMessage = (): string => {
   return ENCOURAGEMENT_MESSAGES[Math.floor(Math.random() * ENCOURAGEMENT_MESSAGES.length)];
 };
