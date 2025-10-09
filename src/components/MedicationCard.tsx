@@ -6,14 +6,17 @@ import { Ionicons } from "@expo/vector-icons";
 import { FONTS } from "@/constants/theme";
 import { StyleSheet } from "react-native";
 
-export const MedicationCard: React.FC<{
+interface MedicationCardProps {
   medication: Medication;
   onEdit: () => void;
   onDelete: () => void;
   onMarkTaken: (medicationId: string, scheduleId: string, name: string) => void;
-  onMarkSkipped: (medicationId: string, scheduleId: string, name: string) => void;
+  onMarkSkipped: (medicationId: string, scheduleId: string, name: string) => Promise<void>;
   adherence: number;
-}> = ({ medication, onEdit, onDelete, onMarkTaken, onMarkSkipped, adherence }) => {
+}
+
+export const MedicationCard = React.memo<MedicationCardProps>((props) => {
+  const { medication, onEdit, onDelete, onMarkTaken, onMarkSkipped, adherence } = props;
   const [expanded, setExpanded] = useState(false);
 
   const getScheduleStatus = (schedule: MedicationSchedule) => {
@@ -152,7 +155,7 @@ export const MedicationCard: React.FC<{
       )}
     </TouchableOpacity>
   );
-};
+});
 
 const styles = StyleSheet.create({
   medicationCard: {
