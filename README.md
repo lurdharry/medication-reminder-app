@@ -73,12 +73,18 @@ MediRemind combines AI, voice technology, and intelligent reminders to make medi
 
 ```bash
 # Clone and install
-git clone https://github.com/yourusername/mediremind.git
-cd mediremind
+git clone https://github.com/lurdharry/medication-reminder-app.git
+cd medication-reminder-app
 npm install
 
-# Add your OpenAI API key to .env
-OPENAI_API_KEY=your_key_here
+# Add your env details key to .env
+EXPO_PUBLIC_OPENAI_MODEL=gpt-5-mini // or your prefered model
+EXPO_PUBLIC_OPENAI_API_KEY=your_api_key
+EXPO_PUBLIC_AI_TEMPERATURE=1
+EXPO_PUBLIC_AI_MAX_TOKENS=1000
+
+# Prebuild (required for voice command permissions to work correctly)
+npx expo prebuild
 
 # Start the app
 npx expo start
