@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 
-import { Medication, DoseRecord, AdherenceInsights } from "../types";
+import { DoseRecord, AdherenceInsights } from "../types";
 import { STORAGE_KEYS } from "@/constants/storage";
 import { Storage } from "@/services/storage";
 
@@ -281,64 +281,11 @@ export const useBehaviorAnalysis = (userId?: string) => {
     ]
   );
 
-  /**
-   * Predict likelihood of missing a dose (0-1 scale)
-   */
-  const predictMissLikelihood = useCallback(
-    (medication: Medication, scheduledTime: Date): number => {
-      try {
-        const records = Storage.getObject<DoseRecord[]>(STORAGE_KEYS.DOSE_RECORDS) || [];
-        const medicationRecords = records.filter((r) => r.medicationId === medication.id);
-
-        if (medicationRecords.length < 5) return 0.5;
-
-        const hour = scheduledTime.getHours();
-        const dayOfWeek = scheduledTime.getDay();
-
-        // Time of day risk
-        const sameTimeRecords = medicationRecords.filter((r) => {
-          const recordHour = new Date(r.scheduledTime).getHours();
-          return Math.abs(recordHour - hour) <= 1;
-        });
-        const timeRisk =
-          sameTimeRecords.length > 0
-            ? sameTimeRecords.filter((r) => r.status === "missed").length / sameTimeRecords.length
-            : 0.5;
-
-        // Day of week risk
-        const sameDayRecords = medicationRecords.filter(
-          (r) => new Date(r.scheduledTime).getDay() === dayOfWeek
-        );
-        const dayRisk =
-          sameDayRecords.length > 0
-            ? sameDayRecords.filter((r) => r.status === "missed").length / sameDayRecords.length
-            : 0.5;
-
-        // Recent trend risk
-        const recentRecords = medicationRecords.slice(-7);
-        const trendRisk =
-          recentRecords.length > 0
-            ? recentRecords.filter((r) => r.status === "missed").length / recentRecords.length
-            : 0.5;
-
-        // Weighted average
-        const riskScore = timeRisk * 0.4 + dayRisk * 0.3 + trendRisk * 0.3;
-
-        return Math.min(Math.max(riskScore, 0), 1);
-      } catch (error) {
-        console.error("Error predicting miss likelihood:", error);
-        return 0.5;
-      }
-    },
-    []
-  );
-
   return {
     insights,
 
     error,
     analyzePatterns,
-    predictMissLikelihood,
   };
 };
 
