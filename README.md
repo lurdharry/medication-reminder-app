@@ -4,7 +4,10 @@ An intelligent medication management solution designed for elderly users and peo
 
 ## The Problem
 
-Medication non-adherence affects 50% of patients with chronic conditions, leading to 125,000 deaths annually and $100 billion in preventable healthcare costs. Elderly patients face unique challenges:
+Meet Sarah, 64, who manages 5 medications daily. She often forgets doses,
+struggles with small text on pill bottles, and worries about taking the wrong combination.
+
+Sarah isn't alone. Medication non-adherence affects 50% of patients with chronic conditions, leading to 125,000 deaths annually and $100 billion in preventable healthcare costs. Elderly patients face unique challenges:
 
 - Complex medication schedules
 - Memory issues
@@ -14,7 +17,8 @@ Medication non-adherence affects 50% of patients with chronic conditions, leadin
 
 ## Our Solution
 
-MediRemind combines AI, voice technology, and intelligent reminders to make medication management effortless and accessible for everyone, especially those who need it most.
+Unlike traditional pill reminder apps, MediRemind combines AI, voice technology,
+and intelligent reminders to make medication management effortless...
 
 ## Impact
 
