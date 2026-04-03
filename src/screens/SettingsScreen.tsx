@@ -12,7 +12,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMedicationContext } from "@/contexts/MedicationContext";
-import { aiApi } from "@/services/api/aiApi";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 
@@ -24,20 +23,6 @@ export const SettingsScreen: React.FC = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
       { text: "Cancel", style: "cancel" },
       { text: "Logout", style: "destructive", onPress: logout },
-    ]);
-  };
-
-  const handleClearConversation = () => {
-    Alert.alert("Clear Conversation", "This will delete all AI chat history.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Clear",
-        style: "destructive",
-        onPress: async () => {
-          await aiApi.clearConversation();
-          Alert.alert("Success", "Conversation history cleared");
-        },
-      },
     ]);
   };
 
@@ -131,22 +116,6 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
-        {/* Data */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.green }]}>
-              <Ionicons name="server" size={16} color={COLORS.primaryDark} />
-            </View>
-            <Text style={styles.sectionTitle}>Data</Text>
-          </View>
-
-          <Pressable style={[styles.row, styles.rowLast]} onPress={handleClearConversation}>
-            <Ionicons name="chatbubbles-outline" size={18} color={COLORS.gray.dark} />
-            <Text style={styles.actionText}>Clear AI Conversation</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.gray.light} />
-          </Pressable>
-        </View>
-
         {/* Logout */}
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
@@ -225,12 +194,6 @@ const styles = StyleSheet.create({
     fontSize: FONTS.size.small,
     color: COLORS.gray.medium,
     marginTop: 2,
-  },
-  actionText: {
-    flex: 1,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.dark,
-    marginLeft: 10,
   },
   logoutButton: {
     flexDirection: "row",
