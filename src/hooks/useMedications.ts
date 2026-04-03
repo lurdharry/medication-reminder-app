@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { medicationApi, MedicationResponse } from "@/services/api/medicationApi";
 import { doseScheduleApi, DoseScheduleResponse } from "@/services/api/doseScheduleApi";
-import { doseRecordApi } from "@/services/api/doseRecordApi";
+import { doseRecordApi, DoseRecordResponse } from "@/services/api/doseRecordApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { Medication } from "@/types";
 
@@ -25,7 +25,8 @@ interface MedicationInput {
 
 const mapToMedication = (
   med: MedicationResponse,
-  schedules: DoseScheduleResponse[]
+  schedules: DoseScheduleResponse[],
+  todayRecords: DoseRecordResponse[]
 ): Medication => ({
   id: med.id,
   name: med.name,
@@ -42,22 +43,35 @@ const mapToMedication = (
   color: med.color || undefined,
   shape: med.shape || undefined,
   adherenceRate: 0,
-  schedule: schedules.map((s) => ({
-    id: s.id,
-    time: s.time,
-    taken: false,
-    skipped: false,
-  })),
+  schedule: schedules.map((s) => {
+    const record = todayRecords.find((r) => r.doseScheduleId === s.id);
+    return {
+      id: s.id,
+      time: s.time.substring(0, 5),
+      taken: record?.status === "taken",
+      skipped: record?.status === "skipped" || record?.status === "missed",
+    };
+  }),
 });
 
 const fetchMedicationsWithSchedules = async (): Promise<Medication[]> => {
-  const response = await medicationApi.getAll();
-  const meds = response.data.data;
+  const [medsResponse, recordsResponse] = await Promise.all([
+    medicationApi.getAll(),
+    doseRecordApi.getHistory(),
+  ]);
+
+  const meds = medsResponse.data.data;
+  const todayRecords = recordsResponse.data.data.filter((r) => {
+    const recordDate = r.scheduledAt?.split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    return recordDate === today;
+  });
 
   return Promise.all(
     meds.map(async (med) => {
       const schedulesResponse = await doseScheduleApi.getAll(med.id);
-      return mapToMedication(med, schedulesResponse.data.data);
+      const medRecords = todayRecords.filter((r) => r.medicationId === med.id);
+      return mapToMedication(med, schedulesResponse.data.data, medRecords);
     })
   );
 };
