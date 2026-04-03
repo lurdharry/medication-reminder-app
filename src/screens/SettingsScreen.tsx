@@ -55,49 +55,55 @@ export const SettingsScreen: React.FC = () => {
         {/* Profile */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="person" size={20} color={COLORS.primary} />
+            <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.blue }]}>
+              <Ionicons name="person" size={16} color={COLORS.primaryDark} />
+            </View>
             <Text style={styles.sectionTitle}>Profile</Text>
           </View>
 
-          <View style={styles.profileRow}>
-            <Text style={styles.profileLabel}>Name</Text>
-            <Text style={styles.profileValue}>{user?.name || "—"}</Text>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>Name</Text>
+            <Text style={styles.rowValue}>{user?.name || "—"}</Text>
           </View>
 
-          <View style={styles.profileRow}>
-            <Text style={styles.profileLabel}>Email</Text>
-            <Text style={styles.profileValue}>{user?.email || "—"}</Text>
+          <View style={[styles.row, styles.rowLast]}>
+            <Text style={styles.rowLabel}>Email</Text>
+            <Text style={styles.rowValue}>{user?.email || "—"}</Text>
           </View>
         </View>
 
         {/* Notifications */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="notifications" size={20} color={COLORS.primary} />
+            <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.peach }]}>
+              <Ionicons name="notifications" size={16} color={COLORS.primaryDark} />
+            </View>
             <Text style={styles.sectionTitle}>Notifications</Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Reminders</Text>
-              <Text style={styles.settingDescription}>Receive medication reminders</Text>
+          <View style={styles.row}>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowTitle}>Reminders</Text>
+              <Text style={styles.rowDescription}>Receive medication reminders</Text>
             </View>
             <Switch
               value={userPreferences.notificationsEnabled}
               onValueChange={(value) => handleToggle("notificationsEnabled", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
+              trackColor={{ false: COLORS.gray.lighter, true: COLORS.primary }}
+              thumbColor={COLORS.white}
             />
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Sound</Text>
-              <Text style={styles.settingDescription}>Play notification sounds</Text>
+          <View style={[styles.row, styles.rowLast]}>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowTitle}>Sound</Text>
+              <Text style={styles.rowDescription}>Play notification sounds</Text>
             </View>
             <Switch
               value={userPreferences.soundEnabled}
               onValueChange={(value) => handleToggle("soundEnabled", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
+              trackColor={{ false: COLORS.gray.lighter, true: COLORS.primary }}
+              thumbColor={COLORS.white}
             />
           </View>
         </View>
@@ -105,19 +111,22 @@ export const SettingsScreen: React.FC = () => {
         {/* Voice */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="mic" size={20} color={COLORS.primary} />
+            <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.purple }]}>
+              <Ionicons name="mic" size={16} color={COLORS.primaryDark} />
+            </View>
             <Text style={styles.sectionTitle}>Voice Assistant</Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Voice Enabled</Text>
-              <Text style={styles.settingDescription}>Enable voice assistant features</Text>
+          <View style={[styles.row, styles.rowLast]}>
+            <View style={styles.rowInfo}>
+              <Text style={styles.rowTitle}>Voice Enabled</Text>
+              <Text style={styles.rowDescription}>Enable voice assistant features</Text>
             </View>
             <Switch
               value={userPreferences.voiceEnabled}
               onValueChange={(value) => handleToggle("voiceEnabled", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
+              trackColor={{ false: COLORS.gray.lighter, true: COLORS.primary }}
+              thumbColor={COLORS.white}
             />
           </View>
         </View>
@@ -125,24 +134,25 @@ export const SettingsScreen: React.FC = () => {
         {/* Data */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="server" size={20} color={COLORS.primary} />
+            <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.green }]}>
+              <Ionicons name="server" size={16} color={COLORS.primaryDark} />
+            </View>
             <Text style={styles.sectionTitle}>Data</Text>
           </View>
 
-          <Pressable style={styles.actionRow} onPress={handleClearConversation}>
-            <Ionicons name="chatbubbles-outline" size={20} color={COLORS.gray.dark} />
+          <Pressable style={[styles.row, styles.rowLast]} onPress={handleClearConversation}>
+            <Ionicons name="chatbubbles-outline" size={18} color={COLORS.gray.dark} />
             <Text style={styles.actionText}>Clear AI Conversation</Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.gray.medium} />
+            <Ionicons name="chevron-forward" size={16} color={COLORS.gray.light} />
           </Pressable>
         </View>
 
         {/* Logout */}
         <Pressable style={styles.logoutButton} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+          <Ionicons name="log-out-outline" size={18} color={COLORS.error} />
           <Text style={styles.logoutText}>Logout</Text>
         </Pressable>
 
-        {/* Version */}
         <Text style={styles.versionText}>MediRemind v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
@@ -150,50 +160,77 @@ export const SettingsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background.secondary },
+  container: { flex: 1, backgroundColor: COLORS.background.primary },
   scrollView: { flex: 1 },
   header: { paddingHorizontal: DIMENSIONS.PADDING, paddingVertical: 20 },
-  title: { fontSize: FONTS.size.huge, fontWeight: "bold", color: COLORS.black },
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: COLORS.primaryDark,
+  },
   section: {
     marginHorizontal: DIMENSIONS.PADDING,
     marginBottom: 16,
     backgroundColor: COLORS.white,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
   },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 },
-  sectionTitle: { fontSize: FONTS.size.large, fontWeight: "600", color: COLORS.black },
-  profileRow: {
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 14,
+    gap: 10,
+  },
+  sectionIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionTitle: {
+    fontSize: FONTS.size.medium,
+    fontWeight: "600",
+    color: COLORS.primaryDark,
+  },
+  row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 13,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.gray.lightest,
   },
-  profileLabel: { fontSize: FONTS.size.medium, color: COLORS.gray.medium },
-  profileValue: { fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.black },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray.lightest,
+  rowLast: {
+    borderBottomWidth: 0,
   },
-  settingInfo: { flex: 1, marginRight: 16 },
-  settingTitle: { fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.black },
-  settingDescription: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginTop: 2 },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    gap: 12,
+  rowInfo: { flex: 1, marginRight: 16 },
+  rowLabel: {
+    fontSize: FONTS.size.medium,
+    color: COLORS.gray.medium,
+  },
+  rowValue: {
+    fontSize: FONTS.size.medium,
+    fontWeight: "500",
+    color: COLORS.primaryDark,
+  },
+  rowTitle: {
+    fontSize: FONTS.size.medium,
+    fontWeight: "500",
+    color: COLORS.primaryDark,
+  },
+  rowDescription: {
+    fontSize: FONTS.size.small,
+    color: COLORS.gray.medium,
+    marginTop: 2,
   },
   actionText: {
     flex: 1,
     fontSize: FONTS.size.medium,
     color: COLORS.gray.dark,
+    marginLeft: 10,
   },
   logoutButton: {
     flexDirection: "row",
@@ -202,9 +239,10 @@ const styles = StyleSheet.create({
     gap: 8,
     marginHorizontal: DIMENSIONS.PADDING,
     marginBottom: 16,
-    backgroundColor: COLORS.error + "10",
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.error + "30",
   },
   logoutText: {
     color: COLORS.error,
