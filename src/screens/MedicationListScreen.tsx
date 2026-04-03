@@ -4,27 +4,27 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Alert,
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useAppNavigation } from "@/hooks/useAppNavigation";
+import { Ionicons } from "@expo/vector-icons";
 
-import { useMedicationContext } from "../contexts/MedicationContext";
-import medicationService from "../services/medicationService";
-import { useVoice } from "../hooks/useVoice";
-
-import { Medication } from "../types";
+import { useMedications } from "@/hooks/useMedications";
+import { useAdherence } from "@/hooks/useAdherence";
+import { useVoice } from "@/hooks/useVoice";
+import { Medication } from "@/types";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
-import { Ionicons } from "@expo/vector-icons";
 import MedicationList from "@/components/MedicationList";
 
 export const MedicationListScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const { medications, deleteMedication, getAdherenceRate, refreshMedications } =
-    useMedicationContext();
+  const navigation = useAppNavigation();
+  const { medications, deleteMedication, markDoseTaken, markDoseSkipped, refetch } =
+    useMedications();
+  const { getOverallStats } = useAdherence();
   const { speak } = useVoice();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,11 +52,11 @@ export const MedicationListScreen: React.FC = () => {
   };
 
   const handleAddMedication = () => {
-    navigation.navigate("AddMedication" as never);
+    navigation.navigate("AddMedication");
   };
 
   const handleEditMedication = (medication: Medication) => {
-    navigation.navigate("AddMedication" as never, { medicationId: medication.id } as never);
+    navigation.navigate("AddMedication", { medicationId: medication.id });
   };
 
   const handleDeleteMedication = (medication: Medication) => {
@@ -74,17 +74,16 @@ export const MedicationListScreen: React.FC = () => {
   };
 
   const handleMarkTaken = async (
-    medicationId: string,
+    _medicationId: string,
     scheduleId: string,
     medicationName: string
   ) => {
-    await medicationService.markDoseTaken(medicationId, scheduleId);
+    await markDoseTaken(scheduleId);
     await speak(`${medicationName} marked as taken`);
-    await refreshMedications();
   };
 
   const handleMarkSkipped = async (
-    medicationId: string,
+    _medicationId: string,
     scheduleId: string,
     medicationName: string
   ) => {
@@ -94,9 +93,8 @@ export const MedicationListScreen: React.FC = () => {
         text: "Skip",
         style: "destructive",
         onPress: async () => {
-          await medicationService.markDoseSkipped(medicationId, scheduleId);
+          await markDoseSkipped(scheduleId);
           await speak(`${medicationName} marked as skipped`);
-          await refreshMedications();
         },
       },
     ]);
@@ -104,7 +102,7 @@ export const MedicationListScreen: React.FC = () => {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refreshMedications();
+    await refetch();
     setRefreshing(false);
   };
 
@@ -136,19 +134,19 @@ export const MedicationListScreen: React.FC = () => {
   };
 
   const filteredMedications = getFilteredMedications();
-  const overallAdherence = getAdherenceRate();
+  const overallStats = getOverallStats();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>My Medications</Text>
-        <TouchableOpacity
+        <Pressable
           style={styles.addButton}
           onPress={handleAddMedication}
           accessibilityLabel="Add new medication"
         >
           <Ionicons name="add-circle" size={32} color={COLORS.primary} />
-        </TouchableOpacity>
+        </Pressable>
       </View>
 
       {medications.length > 0 && (
@@ -159,7 +157,7 @@ export const MedicationListScreen: React.FC = () => {
               <Text style={styles.statLabel}>Total</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statValue}>{overallAdherence}%</Text>
+              <Text style={styles.statValue}>{overallStats.rate}%</Text>
               <Text style={styles.statLabel}>Adherence</Text>
             </View>
             <View style={styles.statCard}>
@@ -182,7 +180,7 @@ export const MedicationListScreen: React.FC = () => {
             <Text style={styles.sortLabel}>Sort by:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {(["time", "name", "adherence"] as const).map((option) => (
-                <TouchableOpacity
+                <Pressable
                   key={option}
                   style={[styles.sortButton, sortBy === option && styles.sortButtonActive]}
                   onPress={() => setSortBy(option)}
@@ -195,7 +193,7 @@ export const MedicationListScreen: React.FC = () => {
                   >
                     {option.charAt(0).toUpperCase() + option.slice(1)}
                   </Text>
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </ScrollView>
           </View>
@@ -211,7 +209,7 @@ export const MedicationListScreen: React.FC = () => {
         handleDeleteMedication={handleDeleteMedication}
         handleMarkTaken={handleMarkTaken}
         handleMarkSkipped={handleMarkSkipped}
-        getAdherenceRate={getAdherenceRate}
+        getAdherenceRate={() => overallStats.rate}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
       />
@@ -258,7 +256,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: FONTS.size.medium,
-
     backgroundColor: "transparent",
   },
   sortContainer: {

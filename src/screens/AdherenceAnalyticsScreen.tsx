@@ -2,17 +2,14 @@ import React, { useState, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMedicationContext } from "../contexts/MedicationContext";
+import { useMedications } from "@/hooks/useMedications";
+import { useAdherence } from "@/hooks/useAdherence";
 import { useBehaviorAnalysis } from "../hooks/useBehaviorAnalysis";
 import { ADHERENCE_THRESHOLDS } from "@/constants";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS as DIMS, FONTS } from "@/constants/theme";
 
 export const AdherenceAnalyticsScreen: React.FC = () => {
-  const { medications, getAdherenceRate, getAdherenceStats, getAIInsights } =
-    useMedicationContext();
-  const { insights: patterns, analyzePatterns } = useBehaviorAnalysis();
-
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState<7 | 30 | 90>(30);
   const [aiInsights, setAIInsights] = useState<{
@@ -21,21 +18,18 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
     encouragement: string;
   } | null>(null);
 
+  const { medications } = useMedications();
+  const { getOverallStats, getMedicationStats, refetch } = useAdherence(selectedTimeframe);
+  const { insights: patterns, analyzePatterns } = useBehaviorAnalysis();
+
   useEffect(() => {
-    loadAnalytics();
+    analyzePatterns(selectedTimeframe);
   }, [selectedTimeframe]);
-
-  const loadAnalytics = async () => {
-    await analyzePatterns(selectedTimeframe);
-    const ai = await getAIInsights();
-    setAIInsights(ai);
-  };
-
-  console.log({ patterns, aiInsights });
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadAnalytics();
+    await refetch();
+    await analyzePatterns(selectedTimeframe);
     setRefreshing(false);
   };
 
@@ -54,8 +48,8 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
     return "Critical";
   };
 
-  const overallStats = getAdherenceStats();
-  const overallRate = getAdherenceRate();
+  const overallStats = getOverallStats();
+  const overallRate = overallStats.rate;
   const adherenceColor = getAdherenceColor(overallRate);
   const adherenceLabel = getAdherenceLabel(overallRate);
 
@@ -260,8 +254,8 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
         </View>
 
         {medications.map((medication) => {
-          const medStats = getAdherenceStats(medication.id);
-          const medRate = getAdherenceRate(medication.id);
+          const medStats = getMedicationStats(medication.id);
+          const medRate = medStats?.adherenceRate || 0;
           const medColor = getAdherenceColor(medRate);
 
           return (
@@ -287,9 +281,9 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
 
               <View style={styles.medicationStats}>
                 {[
-                  { stat: medStats.taken, label: "Taken" },
-                  { stat: medStats.missed, label: "Missed" },
-                  { stat: medStats.skipped, label: "Skipped" },
+                  { stat: medStats?.taken || 0, label: "Taken" },
+                  { stat: medStats?.missed || 0, label: "Missed" },
+                  { stat: medStats?.skipped || 0, label: "Skipped" },
                 ].map((item) => (
                   <View style={styles.medicationStat} key={item.label}>
                     <Text style={styles.medicationStatValue}>{item.stat}</Text>

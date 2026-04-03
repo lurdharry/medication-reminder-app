@@ -7,10 +7,12 @@ import React, {
   PropsWithChildren,
 } from "react";
 import { TokenManager } from "@/services/api";
+import { userApi, UserProfile } from "@/services/api/userApi";
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
+  user: UserProfile | null;
   setAuthenticated: (token: string) => void;
   logout: () => void;
 }
@@ -20,26 +22,48 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
-    const token = TokenManager.getToken();
-    setIsAuthenticated(!!token);
-    setIsLoading(false);
+    const initAuth = async () => {
+      const token = TokenManager.getToken();
+      if (token) {
+        try {
+          const response = await userApi.getProfile();
+          setUser(response.data.data);
+          setIsAuthenticated(true);
+        } catch {
+          TokenManager.clearToken();
+          setIsAuthenticated(false);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    initAuth();
   }, []);
 
-  const setAuthenticated = useCallback((token: string) => {
+  const setAuthenticated = useCallback(async (token: string) => {
     TokenManager.setToken(token);
+    try {
+      const response = await userApi.getProfile();
+      setUser(response.data.data);
+    } catch {
+      setUser(null);
+    }
     setIsAuthenticated(true);
   }, []);
 
   const logout = useCallback(() => {
     TokenManager.clearToken();
+    setUser(null);
     setIsAuthenticated(false);
   }, []);
 
   const contextValue: AuthContextType = {
     isAuthenticated,
     isLoading,
+    user,
     setAuthenticated,
     logout,
   };

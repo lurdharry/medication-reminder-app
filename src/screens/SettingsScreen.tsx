@@ -12,27 +12,23 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMedicationContext } from "../contexts/MedicationContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useInteractionLogger } from "../hooks/useInteractionLogger";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 
 export const SettingsScreen: React.FC = () => {
-  const { user, userPreferences, updateUser, updatePreferences } = useMedicationContext();
+  const { userPreferences, updatePreferences } = useMedicationContext();
+  const { user, logout } = useAuth();
   const { exportLogsAsJSON, clearLogs, getLogSummary } = useInteractionLogger();
 
   const [userName, setUserName] = useState(user?.name || "");
-  const [userAge, setUserAge] = useState(user?.age?.toString() || "");
 
-  const handleSaveProfile = async () => {
-    try {
-      await updateUser({
-        name: userName,
-        age: parseInt(userAge) || 0,
-      });
-      Alert.alert("Success", "Profile updated successfully");
-    } catch (error) {
-      Alert.alert("Error", "Could not update profile");
-    }
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure you want to logout?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", style: "destructive", onPress: logout },
+    ]);
   };
 
   const handleToggle = async (key: keyof typeof userPreferences, value: boolean) => {
@@ -98,19 +94,18 @@ export const SettingsScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Age</Text>
+            <Text style={styles.label}>Email</Text>
             <TextInput
-              style={styles.input}
-              value={userAge}
-              onChangeText={setUserAge}
-              placeholder="Enter your age"
+              style={[styles.input, styles.inputDisabled]}
+              value={user?.email || ""}
+              editable={false}
               placeholderTextColor={COLORS.gray.medium}
-              keyboardType="numeric"
             />
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
-            <Text style={styles.saveButtonText}>Save Profile</Text>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+            <Text style={styles.logoutButtonText}>Logout</Text>
           </TouchableOpacity>
         </View>
 
@@ -385,14 +380,25 @@ const styles = StyleSheet.create({
     fontSize: FONTS.size.medium,
     color: COLORS.black,
   },
-  saveButton: {
-    backgroundColor: COLORS.primary,
+  inputDisabled: {
+    backgroundColor: COLORS.gray.lightest,
+    color: COLORS.gray.medium,
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: COLORS.error + "15",
     borderRadius: 12,
     padding: 16,
-    alignItems: "center",
     marginTop: 8,
   },
-  saveButtonText: { color: COLORS.white, fontSize: FONTS.size.medium, fontWeight: "600" },
+  logoutButtonText: {
+    color: COLORS.error,
+    fontSize: FONTS.size.medium,
+    fontWeight: "600",
+  },
   settingRow: {
     flexDirection: "row",
     justifyContent: "space-between",

@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { COLORS } from "@/constants/colors";
-import { useMedicationContext } from "@/contexts/MedicationContext";
+import { useMedications } from "@/hooks/useMedications";
+import { useAdherence } from "@/hooks/useAdherence";
+import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/hooks/useVoice";
-import medicationService from "./medicationService";
 import { Medication, MedicationSchedule } from "@/types";
-import { getGreeting } from "@/utils/helpers";
 
 interface ActionItem {
   id: string;
@@ -23,67 +23,81 @@ interface QuickStatItem {
 }
 
 export const useHomeScreen = () => {
-  const navigation = useNavigation();
-  const { medications, deleteMedication, getAdherenceRate, refreshMedications, user } =
-    useMedicationContext();
+  const navigation = useAppNavigation();
+  const { medications, refetch, markDoseTaken, markDoseSkipped } = useMedications();
+  const { getOverallStats } = useAdherence();
+  const { user } = useAuth();
   const { speak } = useVoice();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [pendingDoses, setPendingDoses] = useState<
-    Array<{ medication: Medication; schedule: MedicationSchedule }>
-  >([]);
 
-  useEffect(() => {
-    loadDashboard();
+  const overallStats = getOverallStats();
+
+  const pendingDoses = useMemo(() => {
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
+
+    const pending: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
+
+    medications.forEach((med) => {
+      med.schedule.forEach((schedule) => {
+        if (!schedule.taken && !schedule.skipped && schedule.time <= currentTime) {
+          pending.push({ medication: med, schedule });
+        }
+      });
+    });
+
+    return pending;
   }, [medications]);
 
-  const overallAdherence = getAdherenceRate();
+  const upcomingDoses = useMemo(() => {
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
 
-  const loadDashboard = async () => {
-    const pending = medicationService.getPendingDoses();
-    setPendingDoses(pending);
+    const upcoming: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
 
-    const greeting = getGreeting();
-    const userName = user?.name || "there";
-    const pendingCount = pending.length;
+    medications.forEach((med) => {
+      med.schedule.forEach((schedule) => {
+        if (!schedule.taken && !schedule.skipped && schedule.time > currentTime) {
+          upcoming.push({ medication: med, schedule });
+        }
+      });
+    });
 
-    if (pendingCount > 0) {
-      await speak(
-        `${greeting}, ${userName}. You have ${pendingCount} pending dose${
-          pendingCount !== 1 ? "s" : ""
-        }.`
-      );
-    }
-  };
+    return upcoming.sort((a, b) => a.schedule.time.localeCompare(b.schedule.time)).slice(0, 3);
+  }, [medications]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await refreshMedications();
-    await loadDashboard();
+    await refetch();
     setRefreshing(false);
   };
 
   const handleMarkTaken = async (
-    medicationId: string,
+    _medicationId: string,
     scheduleId: string,
     medicationName: string
   ) => {
-    await medicationService.markDoseTaken(medicationId, scheduleId);
+    await markDoseTaken(scheduleId);
     await speak(`${medicationName} marked as taken. Great job!`);
-    await loadDashboard();
   };
 
-  const handleMarkSkipped = async (medicationId: string, scheduleId: string) => {
-    await medicationService.markDoseSkipped(medicationId, scheduleId);
-    await loadDashboard();
+  const handleMarkSkipped = async (_medicationId: string, scheduleId: string) => {
+    await markDoseSkipped(scheduleId);
   };
 
   const handleViewAllMedications = () => {
-    navigation.navigate("Medications" as never);
+    navigation.navigate("Medications");
   };
 
   const handleViewAnalytics = () => {
-    navigation.navigate("Analytics" as never);
+    navigation.navigate("Analytics");
   };
 
   const quickActions: ActionItem[] = [
@@ -91,7 +105,7 @@ export const useHomeScreen = () => {
       id: "add",
       label: "Add Medication",
       icon: "add-circle",
-      onPress: () => navigation.navigate("AddMedication" as never),
+      onPress: () => navigation.navigate("AddMedication"),
     },
     {
       id: "list",
@@ -109,7 +123,7 @@ export const useHomeScreen = () => {
       id: "settings",
       label: "Settings",
       icon: "settings",
-      onPress: () => navigation.navigate("Settings" as never),
+      onPress: () => navigation.navigate("Settings"),
     },
   ];
 
@@ -123,7 +137,7 @@ export const useHomeScreen = () => {
       },
       {
         icon: "checkmark-done",
-        title: overallAdherence + "%",
+        title: overallStats.rate + "%",
         subTitle: "Adherence",
         color: COLORS.success,
       },
@@ -134,10 +148,8 @@ export const useHomeScreen = () => {
         color: COLORS.warning,
       },
     ],
-    [medications, overallAdherence, pendingDoses]
+    [medications, overallStats.rate, pendingDoses]
   );
-
-  const upcomingDoses = useMemo(() => medicationService.getUpcomingDoses().slice(0, 3), []);
 
   return {
     handleMarkSkipped,
@@ -147,7 +159,6 @@ export const useHomeScreen = () => {
     handleViewAnalytics,
     quickStats,
     handleRefresh,
-    loadDashboard,
     refreshing,
     pendingDoses,
     userName: user?.name,

@@ -13,25 +13,24 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useNavigation, useRoute } from "@react-navigation/native";
+import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 
-import { useMedicationContext } from "../contexts/MedicationContext";
+import { useMedications } from "@/hooks/useMedications";
+import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { useVoice } from "../hooks/useVoice";
-import { Medication } from "../types";
-import { generateId } from "../utils/helpers";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { MEDICATION_TIMES } from "@/constants";
 
 export const AddMedicationScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useAppNavigation();
   const route = useRoute();
   const { medicationId } = (route.params as { medicationId?: string }) || {};
 
-  const { medications, addMedication, updateMedication } = useMedicationContext();
+  const { medications, addMedication, updateMedication } = useMedications();
   const { speak } = useVoice();
 
   const isEditing = !!medicationId;
@@ -106,32 +105,23 @@ export const AddMedicationScreen: React.FC = () => {
     }
 
     try {
-      const schedule = selectedTimes.map((time) => ({
-        id: generateId(),
-        time,
-        taken: false,
-        skipped: false,
-      }));
-
-      const medicationData: Medication = {
-        id: isEditing ? medicationId : generateId(),
+      const medicationInput = {
         name: name.trim(),
         dosage,
         unit,
         purpose: purpose.trim(),
         instructions: instructions.trim(),
-        schedule,
         imageUri,
         startDate: existingMed?.startDate || new Date(),
-        refillDate: refillEnabled ? refillDate : existingMed?.refillDate || new Date(),
-        adherenceRate: existingMed?.adherenceRate || 100,
+        refillDate: refillEnabled ? refillDate : undefined,
+        schedule: selectedTimes.map((time) => ({ time })),
       };
 
       if (isEditing) {
-        await updateMedication(medicationData);
+        await updateMedication(medicationId, medicationInput);
         speak(`${name} updated successfully`);
       } else {
-        await addMedication(medicationData);
+        await addMedication(medicationInput);
         speak(`${name} added successfully`);
       }
 
