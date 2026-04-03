@@ -1,27 +1,24 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
+  Pressable,
   Switch,
-  TextInput,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMedicationContext } from "../contexts/MedicationContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMedicationContext } from "@/contexts/MedicationContext";
 import { aiApi } from "@/services/api/aiApi";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 
 export const SettingsScreen: React.FC = () => {
-  const { userPreferences, updatePreferences } = useMedicationContext();
   const { user, logout } = useAuth();
-
-  const [userName, setUserName] = useState(user?.name || "");
+  const { userPreferences, updatePreferences } = useMedicationContext();
 
   const handleLogout = () => {
     Alert.alert("Logout", "Are you sure you want to logout?", [
@@ -30,109 +27,50 @@ export const SettingsScreen: React.FC = () => {
     ]);
   };
 
-  const handleToggle = async (key: keyof typeof userPreferences, value: boolean) => {
-    await updatePreferences({ [key]: value });
+  const handleClearConversation = () => {
+    Alert.alert("Clear Conversation", "This will delete all AI chat history.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Clear",
+        style: "destructive",
+        onPress: async () => {
+          await aiApi.clearConversation();
+          Alert.alert("Success", "Conversation history cleared");
+        },
+      },
+    ]);
   };
 
-  const handleClearHistory = () => {
-    Alert.alert(
-      "Clear History",
-      "Are you sure? This will delete all conversation logs.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: async () => {
-            await aiApi.clearConversation();
-            Alert.alert("Success", "History cleared");
-          },
-        },
-      ]
-    );
+  const handleToggle = (key: keyof typeof userPreferences, value: boolean) => {
+    updatePreferences({ [key]: value });
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Settings</Text>
         </View>
 
-        {/* Profile Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Profile</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Name</Text>
-            <TextInput
-              style={styles.input}
-              value={userName}
-              onChangeText={setUserName}
-              placeholder="Enter your name"
-              placeholderTextColor={COLORS.gray.medium}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={[styles.input, styles.inputDisabled]}
-              value={user?.email || ""}
-              editable={false}
-              placeholderTextColor={COLORS.gray.medium}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Voice Settings */}
+        {/* Profile */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="mic" size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>Voice Settings</Text>
+            <Ionicons name="person" size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Profile</Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Voice Enabled</Text>
-              <Text style={styles.settingDescription}>Enable voice assistant features</Text>
-            </View>
-            <Switch
-              value={userPreferences.voiceEnabled}
-              onValueChange={(value) => handleToggle("voiceEnabled", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
+          <View style={styles.profileRow}>
+            <Text style={styles.profileLabel}>Name</Text>
+            <Text style={styles.profileValue}>{user?.name || "—"}</Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Voice Greeting</Text>
-              <Text style={styles.settingDescription}>Speak welcome messages</Text>
-            </View>
-            <Switch
-              value={userPreferences.voiceGreeting}
-              onValueChange={(value) => handleToggle("voiceGreeting", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Speech Speed</Text>
-              <Text style={styles.settingDescription}>
-                Current: {userPreferences.voiceSpeed}x (Slower is easier to understand)
-              </Text>
-            </View>
+          <View style={styles.profileRow}>
+            <Text style={styles.profileLabel}>Email</Text>
+            <Text style={styles.profileValue}>{user?.email || "—"}</Text>
           </View>
         </View>
 
-        {/* Notification Settings */}
+        {/* Notifications */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="notifications" size={20} color={COLORS.primary} />
@@ -141,7 +79,7 @@ export const SettingsScreen: React.FC = () => {
 
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Notifications Enabled</Text>
+              <Text style={styles.settingTitle}>Reminders</Text>
               <Text style={styles.settingDescription}>Receive medication reminders</Text>
             </View>
             <Switch
@@ -162,168 +100,50 @@ export const SettingsScreen: React.FC = () => {
               trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
             />
           </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Vibration</Text>
-              <Text style={styles.settingDescription}>Vibrate on reminders</Text>
-            </View>
-            <Switch
-              value={userPreferences.vibrationEnabled}
-              onValueChange={(value) => handleToggle("vibrationEnabled", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Quiet Hours</Text>
-              <Text style={styles.settingDescription}>
-                {userPreferences.quietHoursStart} - {userPreferences.quietHoursEnd}
-              </Text>
-            </View>
-            <Switch
-              value={userPreferences.quietHoursEnabled}
-              onValueChange={(value) => handleToggle("quietHoursEnabled", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
         </View>
 
-        {/* AI Settings */}
+        {/* Voice */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="sparkles" size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>AI Assistant</Text>
+            <Ionicons name="mic" size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Voice Assistant</Text>
           </View>
 
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Confirm Before Actions</Text>
-              <Text style={styles.settingDescription}>Ask before executing commands</Text>
+              <Text style={styles.settingTitle}>Voice Enabled</Text>
+              <Text style={styles.settingDescription}>Enable voice assistant features</Text>
             </View>
             <Switch
-              value={userPreferences.aiConfirmBeforeAction}
-              onValueChange={(value) => handleToggle("aiConfirmBeforeAction", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Medication Information</Text>
-              <Text style={styles.settingDescription}>Provide detailed drug info</Text>
-            </View>
-            <Switch
-              value={userPreferences.aiProvideMedicationInfo}
-              onValueChange={(value) => handleToggle("aiProvideMedicationInfo", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Check Drug Interactions</Text>
-              <Text style={styles.settingDescription}>Warn about interactions</Text>
-            </View>
-            <Switch
-              value={userPreferences.aiCheckInteractions}
-              onValueChange={(value) => handleToggle("aiCheckInteractions", value)}
+              value={userPreferences.voiceEnabled}
+              onValueChange={(value) => handleToggle("voiceEnabled", value)}
               trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
             />
           </View>
         </View>
 
-        {/* Accessibility */}
+        {/* Data */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="accessibility" size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>Accessibility</Text>
+            <Ionicons name="server" size={20} color={COLORS.primary} />
+            <Text style={styles.sectionTitle}>Data</Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>High Contrast</Text>
-              <Text style={styles.settingDescription}>Increase color contrast</Text>
-            </View>
-            <Switch
-              value={userPreferences.highContrast}
-              onValueChange={(value) => handleToggle("highContrast", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Reduce Motion</Text>
-              <Text style={styles.settingDescription}>Minimize animations</Text>
-            </View>
-            <Switch
-              value={userPreferences.reduceMotion}
-              onValueChange={(value) => handleToggle("reduceMotion", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Haptic Feedback</Text>
-              <Text style={styles.settingDescription}>Vibrate on interactions</Text>
-            </View>
-            <Switch
-              value={userPreferences.hapticFeedback}
-              onValueChange={(value) => handleToggle("hapticFeedback", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
+          <Pressable style={styles.actionRow} onPress={handleClearConversation}>
+            <Ionicons name="chatbubbles-outline" size={20} color={COLORS.gray.dark} />
+            <Text style={styles.actionText}>Clear AI Conversation</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.gray.medium} />
+          </Pressable>
         </View>
 
-        {/* Privacy & Data */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="shield-checkmark" size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>Privacy & Data</Text>
-          </View>
+        {/* Logout */}
+        <Pressable style={styles.logoutButton} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={20} color={COLORS.error} />
+          <Text style={styles.logoutText}>Logout</Text>
+        </Pressable>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Store Conversations</Text>
-              <Text style={styles.settingDescription}>Save chat history locally</Text>
-            </View>
-            <Switch
-              value={userPreferences.storeConversationsLocally}
-              onValueChange={(value) => handleToggle("storeConversationsLocally", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingTitle}>Share for Research</Text>
-              <Text style={styles.settingDescription}>Help improve the app (anonymized)</Text>
-            </View>
-            <Switch
-              value={userPreferences.shareDataForResearch}
-              onValueChange={(value) => handleToggle("shareDataForResearch", value)}
-              trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
-            />
-          </View>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.dangerButton]}
-            onPress={handleClearHistory}
-          >
-            <Ionicons name="trash" size={20} color={COLORS.error} />
-            <Text style={[styles.actionButtonText, styles.dangerButtonText]}>Clear History</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* About */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About</Text>
-          <Text style={styles.aboutText}>AI Medication Reminder v1.0.0</Text>
-          <Text style={styles.aboutText}>For HCI Research</Text>
-        </View>
+        {/* Version */}
+        <Text style={styles.versionText}>MediRemind v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -336,46 +156,23 @@ const styles = StyleSheet.create({
   title: { fontSize: FONTS.size.huge, fontWeight: "bold", color: COLORS.black },
   section: {
     marginHorizontal: DIMENSIONS.PADDING,
-    marginBottom: 24,
+    marginBottom: 16,
     backgroundColor: COLORS.white,
     borderRadius: 16,
     padding: 16,
   },
-  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 16, gap: 8 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 8 },
   sectionTitle: { fontSize: FONTS.size.large, fontWeight: "600", color: COLORS.black },
-  inputGroup: { marginBottom: 16 },
-  label: {
-    fontSize: FONTS.size.medium,
-    fontWeight: "500",
-    color: COLORS.gray.dark,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: COLORS.gray.lightest,
-    borderRadius: 12,
-    padding: 12,
-    fontSize: FONTS.size.medium,
-    color: COLORS.black,
-  },
-  inputDisabled: {
-    backgroundColor: COLORS.gray.lightest,
-    color: COLORS.gray.medium,
-  },
-  logoutButton: {
+  profileRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: COLORS.error + "15",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 8,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.gray.lightest,
   },
-  logoutButtonText: {
-    color: COLORS.error,
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-  },
+  profileLabel: { fontSize: FONTS.size.medium, color: COLORS.gray.medium },
+  profileValue: { fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.black },
   settingRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -386,24 +183,38 @@ const styles = StyleSheet.create({
   },
   settingInfo: { flex: 1, marginRight: 16 },
   settingTitle: { fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.black },
-  settingDescription: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginTop: 4 },
-  actionButton: {
+  settingDescription: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginTop: 2 },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    gap: 12,
+  },
+  actionText: {
+    flex: 1,
+    fontSize: FONTS.size.medium,
+    color: COLORS.gray.dark,
+  },
+  logoutButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: COLORS.primary + "10",
-    marginTop: 12,
     gap: 8,
+    marginHorizontal: DIMENSIONS.PADDING,
+    marginBottom: 16,
+    backgroundColor: COLORS.error + "10",
+    borderRadius: 16,
+    padding: 16,
   },
-  actionButtonText: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primary },
-  dangerButton: { backgroundColor: COLORS.error + "10" },
-  dangerButtonText: { color: COLORS.error },
-  aboutText: {
+  logoutText: {
+    color: COLORS.error,
+    fontSize: FONTS.size.medium,
+    fontWeight: "600",
+  },
+  versionText: {
+    textAlign: "center",
     fontSize: FONTS.size.small,
     color: COLORS.gray.medium,
-    marginTop: 8,
-    textAlign: "center",
+    marginBottom: 40,
   },
 });
