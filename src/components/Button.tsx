@@ -26,11 +26,11 @@ interface ButtonProps extends PressableProps {
   textStyle?: TextStyle;
 }
 
-const variantStyles: Record<ButtonVariant, { bg: string; text: string; border: string }> = {
-  primary: { bg: COLORS.primary, text: COLORS.white, border: COLORS.primary },
-  secondary: { bg: COLORS.gray.light, text: COLORS.gray.darkest, border: COLORS.gray.light },
-  outline: { bg: "transparent", text: COLORS.primary, border: COLORS.primary },
-  danger: { bg: COLORS.error, text: COLORS.white, border: COLORS.error },
+const variantIconColors: Record<ButtonVariant, string> = {
+  primary: COLORS.white,
+  secondary: COLORS.gray.darkest,
+  outline: COLORS.primary,
+  danger: COLORS.white,
 };
 
 export const Button: React.FC<ButtonProps> = ({
@@ -44,18 +44,14 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   ...rest
 }) => {
-  const colors = variantStyles[variant];
   const isDisabled = disabled || loading;
+  const iconColor = variantIconColors[variant];
 
   return (
     <Pressable
       style={[
         styles.button,
-        {
-          backgroundColor: colors.bg,
-          borderColor: colors.border,
-        },
-        variant === "outline" && styles.outlineBorder,
+        variantButtonStyles[variant],
         isDisabled && styles.disabled,
         style,
       ]}
@@ -63,17 +59,17 @@ export const Button: React.FC<ButtonProps> = ({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={colors.text} />
+        <ActivityIndicator color={iconColor} />
       ) : (
         <>
           {leftIcon && (
-            <Ionicons name={leftIcon} size={20} color={colors.text} />
+            <Ionicons name={leftIcon} size={20} color={iconColor} />
           )}
-          <Text style={[styles.text, { color: colors.text }, textStyle]}>
+          <Text style={[styles.text, variantTextStyles[variant], textStyle]}>
             {title}
           </Text>
           {rightIcon && (
-            <Ionicons name={rightIcon} size={20} color={colors.text} />
+            <Ionicons name={rightIcon} size={20} color={iconColor} />
           )}
         </>
       )}
@@ -90,9 +86,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: DIMENSIONS.SPACING.sm,
   },
-  outlineBorder: {
-    borderWidth: 1,
-  },
   disabled: {
     opacity: 0.7,
   },
@@ -100,4 +93,44 @@ const styles = StyleSheet.create({
     fontSize: FONTS.size.large,
     fontWeight: "700",
   },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+  },
+  secondaryButton: {
+    backgroundColor: COLORS.gray.light,
+  },
+  outlineButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  dangerButton: {
+    backgroundColor: COLORS.error,
+  },
+  primaryText: {
+    color: COLORS.white,
+  },
+  secondaryText: {
+    color: COLORS.gray.darkest,
+  },
+  outlineText: {
+    color: COLORS.primary,
+  },
+  dangerText: {
+    color: COLORS.white,
+  },
 });
+
+const variantButtonStyles: Record<ButtonVariant, ViewStyle> = {
+  primary: styles.primaryButton,
+  secondary: styles.secondaryButton,
+  outline: styles.outlineButton,
+  danger: styles.dangerButton,
+};
+
+const variantTextStyles: Record<ButtonVariant, TextStyle> = {
+  primary: styles.primaryText,
+  secondary: styles.secondaryText,
+  outline: styles.outlineText,
+  danger: styles.dangerText,
+};
