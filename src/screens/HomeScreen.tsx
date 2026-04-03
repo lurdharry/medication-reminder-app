@@ -46,15 +46,15 @@ export const HomeScreen: React.FC = () => {
         <HomeHeader name={userName} />
 
         {/* Quick Stats */}
-        <View style={styles.statsContainer}>
-          {quickStats.map((item) => (
-            <View style={styles.statCard} key={item.subTitle}>
-              <View style={[styles.statIconBg, { backgroundColor: item.color + "15" }]}>
-                <Ionicons name={item.icon} size={18} color={item.color} />
+        <View style={styles.statsCard}>
+          {quickStats.map((item, index) => (
+            <React.Fragment key={item.subTitle}>
+              {index > 0 && <View style={styles.statDivider} />}
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{item.title}</Text>
+                <Text style={styles.statLabel}>{item.subTitle}</Text>
               </View>
-              <Text style={styles.statValue}>{item.title}</Text>
-              <Text style={styles.statLabel}>{item.subTitle}</Text>
-            </View>
+            </React.Fragment>
           ))}
         </View>
 
@@ -200,20 +200,23 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100 },
 
   // Stats
-  statsContainer: {
+  statsCard: {
     flexDirection: "row",
-    paddingHorizontal: DIMENSIONS.PADDING,
+    marginHorizontal: DIMENSIONS.PADDING,
     marginBottom: 24,
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
     backgroundColor: COLORS.white,
-    padding: 14,
     borderRadius: 14,
-    alignItems: "center",
+    padding: 18,
     borderWidth: 1,
     borderColor: COLORS.gray.lighter,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: COLORS.gray.lighter,
   },
   statIconBg: {
     width: 34,
@@ -223,15 +226,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statValue: {
-    fontSize: FONTS.size.large,
+    fontSize: FONTS.size.extraLarge,
     fontWeight: "700",
     color: COLORS.primaryDark,
-    marginTop: 8,
   },
   statLabel: {
     fontSize: FONTS.size.tiny,
     color: COLORS.gray.medium,
-    marginTop: 2,
+    marginTop: 4,
   },
 
   // Sections
