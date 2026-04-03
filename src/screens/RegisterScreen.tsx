@@ -76,14 +76,16 @@ export const RegisterScreen: React.FC = () => {
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
             <ScrollView contentContainerStyle={styles.scrollContent}>
               <View style={styles.header}>
-                <Ionicons name="medical" size={64} color={COLORS.primary} />
+                <View style={styles.logoBg}>
+                  <Ionicons name="medical" size={32} color={COLORS.primaryDark} />
+                </View>
                 <Text style={styles.title}>Create Account</Text>
                 <Text style={styles.subtitle}>Join MediRemind today</Text>
               </View>
 
               <View style={styles.form}>
                 <FormInput
-                  label="Full Name *"
+                  label="Full Name"
                   leftIcon="person-outline"
                   value={values.name}
                   onChangeText={handleChange("name")}
@@ -95,7 +97,7 @@ export const RegisterScreen: React.FC = () => {
                 />
 
                 <FormInput
-                  label="Email *"
+                  label="Email"
                   leftIcon="mail-outline"
                   value={values.email}
                   onChangeText={handleChange("email")}
@@ -109,7 +111,7 @@ export const RegisterScreen: React.FC = () => {
                 />
 
                 <FormInput
-                  label="Password *"
+                  label="Password"
                   leftIcon="lock-closed-outline"
                   rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
                   onRightIconPress={() => setShowPassword(!showPassword)}
@@ -123,7 +125,7 @@ export const RegisterScreen: React.FC = () => {
                 />
 
                 <FormInput
-                  label="Confirm Password *"
+                  label="Confirm Password"
                   leftIcon="lock-closed-outline"
                   value={values.confirmPassword}
                   onChangeText={handleChange("confirmPassword")}
@@ -167,28 +169,36 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: DIMENSIONS.PADDING_LARGE,
+    paddingTop: 40,
   },
   header: {
     alignItems: "center",
-    marginTop: DIMENSIONS.SPACING.xl,
-    marginBottom: DIMENSIONS.SPACING.xxl,
+    marginBottom: 36,
+  },
+  logoBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: COLORS.tint.blue,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
-    fontSize: FONTS.size.huge,
+    fontSize: 28,
     fontWeight: "700",
-    color: COLORS.gray.darkest,
-    marginTop: DIMENSIONS.SPACING.lg,
+    color: COLORS.primaryDark,
+    marginTop: 16,
   },
   subtitle: {
-    fontSize: FONTS.size.large,
+    fontSize: FONTS.size.medium,
     color: COLORS.gray.medium,
-    marginTop: DIMENSIONS.SPACING.sm,
+    marginTop: 6,
   },
   form: {
     marginBottom: DIMENSIONS.SPACING.xl,
   },
   button: {
-    marginTop: DIMENSIONS.SPACING.md,
+    marginTop: DIMENSIONS.SPACING.sm,
   },
   footer: {
     flexDirection: "row",
@@ -201,7 +211,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: FONTS.size.medium,
-    color: COLORS.primary,
+    color: COLORS.primaryDark,
     fontWeight: "600",
   },
 });

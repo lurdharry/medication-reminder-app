@@ -79,8 +79,9 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    padding: DIMENSIONS.PADDING_LARGE,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: DIMENSIONS.PADDING_LARGE,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

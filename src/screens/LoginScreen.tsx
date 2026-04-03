@@ -56,15 +56,13 @@ export const LoginScreen: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <Formik
-          initialValues={initialValues}
-          validationSchema={loginSchema}
-          onSubmit={handleLogin}
-        >
+        <Formik initialValues={initialValues} validationSchema={loginSchema} onSubmit={handleLogin}>
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
             <View style={styles.content}>
               <View style={styles.header}>
-                <Ionicons name="medical" size={64} color={COLORS.primary} />
+                <View style={styles.logoBg}>
+                  <Ionicons name="medical" size={32} color={COLORS.primaryDark} />
+                </View>
                 <Text style={styles.title}>MediRemind</Text>
                 <Text style={styles.subtitle}>Sign in to your account</Text>
               </View>
@@ -136,24 +134,32 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: "center",
-    marginBottom: DIMENSIONS.SPACING.xxl,
+    marginBottom: 40,
+  },
+  logoBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 18,
+    backgroundColor: COLORS.tint.blue,
+    justifyContent: "center",
+    alignItems: "center",
   },
   title: {
-    fontSize: FONTS.size.huge,
+    fontSize: 28,
     fontWeight: "700",
-    color: COLORS.gray.darkest,
-    marginTop: DIMENSIONS.SPACING.lg,
+    color: COLORS.primaryDark,
+    marginTop: 16,
   },
   subtitle: {
-    fontSize: FONTS.size.large,
+    fontSize: FONTS.size.medium,
     color: COLORS.gray.medium,
-    marginTop: DIMENSIONS.SPACING.sm,
+    marginTop: 6,
   },
   form: {
     marginBottom: DIMENSIONS.SPACING.xl,
   },
   button: {
-    marginTop: DIMENSIONS.SPACING.md,
+    marginTop: DIMENSIONS.SPACING.sm,
   },
   footer: {
     flexDirection: "row",
@@ -166,7 +172,7 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: FONTS.size.medium,
-    color: COLORS.primary,
+    color: COLORS.primaryDark,
     fontWeight: "600",
   },
 });
