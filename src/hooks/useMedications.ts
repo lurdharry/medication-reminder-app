@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { medicationApi, MedicationResponse } from "@/services/api/medicationApi";
 import { doseScheduleApi, DoseScheduleResponse } from "@/services/api/doseScheduleApi";
 import { doseRecordApi } from "@/services/api/doseRecordApi";
@@ -49,44 +49,30 @@ const mapToMedication = (
   })),
 });
 
+const fetchMedicationsWithSchedules = async (): Promise<Medication[]> => {
+  const response = await medicationApi.getAll();
+  const meds = response.data.data;
+
+  return Promise.all(
+    meds.map(async (med) => {
+      const schedulesResponse = await doseScheduleApi.getAll(med.id);
+      return mapToMedication(med, schedulesResponse.data.data);
+    })
+  );
+};
+
 export const useMedications = () => {
   const { isAuthenticated } = useAuth();
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchMedications = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await medicationApi.getAll();
-      const meds = response.data.data;
+  const query = useQuery({
+    queryKey: ["medications"],
+    queryFn: fetchMedicationsWithSchedules,
+    enabled: isAuthenticated,
+  });
 
-      const medicationsWithSchedules = await Promise.all(
-        meds.map(async (med) => {
-          const schedulesResponse = await doseScheduleApi.getAll(med.id);
-          return mapToMedication(med, schedulesResponse.data.data);
-        })
-      );
-
-      setMedications(medicationsWithSchedules);
-    } catch (err: any) {
-      const message = err.response?.data?.message || "Failed to load medications";
-      setError(message);
-      console.error("Error loading medications:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchMedications();
-    }
-  }, [isAuthenticated, fetchMedications]);
-
-  const addMedication = useCallback(
-    async (input: MedicationInput) => {
+  const addMutation = useMutation({
+    mutationFn: async (input: MedicationInput) => {
       const response = await medicationApi.add({
         name: input.name,
         dosage: input.dosage,
@@ -110,14 +96,12 @@ export const useMedications = () => {
           await doseScheduleApi.add(newMedId, { time: schedule.time });
         }
       }
-
-      await fetchMedications();
     },
-    [fetchMedications]
-  );
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["medications"] }),
+  });
 
-  const updateMedication = useCallback(
-    async (id: string, input: Partial<MedicationInput>) => {
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, input }: { id: string; input: Partial<MedicationInput> }) => {
       await medicationApi.update(id, {
         name: input.name,
         dosage: input.dosage,
@@ -130,53 +114,52 @@ export const useMedications = () => {
         color: input.color,
         shape: input.shape,
       });
-
-      await fetchMedications();
     },
-    [fetchMedications]
-  );
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["medications"] }),
+  });
 
-  const deleteMedication = useCallback(
-    async (id: string) => {
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
       await medicationApi.delete(id);
-      await fetchMedications();
     },
-    [fetchMedications]
-  );
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["medications"] }),
+  });
 
-  const getMedicationById = useCallback(
-    (id: string): Medication | null => {
-      return medications.find((m) => m.id === id) || null;
-    },
-    [medications]
-  );
-
-  const markDoseTaken = useCallback(
-    async (scheduleId: string) => {
+  const markTakenMutation = useMutation({
+    mutationFn: async (scheduleId: string) => {
       await doseRecordApi.record(scheduleId, { status: "taken" });
-      await fetchMedications();
     },
-    [fetchMedications]
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["medications"] });
+      queryClient.invalidateQueries({ queryKey: ["adherence"] });
+    },
+  });
 
-  const markDoseSkipped = useCallback(
-    async (scheduleId: string) => {
+  const markSkippedMutation = useMutation({
+    mutationFn: async (scheduleId: string) => {
       await doseRecordApi.record(scheduleId, { status: "skipped" });
-      await fetchMedications();
     },
-    [fetchMedications]
-  );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["medications"] });
+      queryClient.invalidateQueries({ queryKey: ["adherence"] });
+    },
+  });
+
+  const getMedicationById = (id: string): Medication | null => {
+    return query.data?.find((m) => m.id === id) || null;
+  };
 
   return {
-    medications,
-    loading,
-    error,
-    fetchMedications,
-    addMedication,
-    updateMedication,
-    deleteMedication,
+    medications: query.data || [],
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch,
+    addMedication: addMutation.mutateAsync,
+    updateMedication: (id: string, input: Partial<MedicationInput>) =>
+      updateMutation.mutateAsync({ id, input }),
+    deleteMedication: deleteMutation.mutateAsync,
     getMedicationById,
-    markDoseTaken,
-    markDoseSkipped,
+    markDoseTaken: markTakenMutation.mutateAsync,
+    markDoseSkipped: markSkippedMutation.mutateAsync,
   };
 };

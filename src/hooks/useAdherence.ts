@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { analyticsApi, AdherenceResponse, MedicationAdherence } from "@/services/api/analyticsApi";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AdherenceStats {
   taken: number;
@@ -10,56 +11,43 @@ interface AdherenceStats {
   streak: number;
 }
 
-export const useAdherence = () => {
-  const [adherence, setAdherence] = useState<AdherenceResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const useAdherence = (days: number = 7) => {
+  const { isAuthenticated } = useAuth();
 
-  const fetchAdherence = useCallback(async (days: number = 7) => {
-    try {
-      setLoading(true);
-      setError(null);
+  const query = useQuery({
+    queryKey: ["adherence", days],
+    queryFn: async (): Promise<AdherenceResponse> => {
       const response = await analyticsApi.getAdherence(days);
-      setAdherence(response.data.data);
       return response.data.data;
-    } catch (err: any) {
-      const message = err.response?.data?.message || "Failed to load adherence";
-      setError(message);
-      console.error("Error loading adherence:", err);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    },
+    enabled: isAuthenticated,
+  });
 
-  const getOverallStats = useCallback((): AdherenceStats => {
-    if (!adherence) {
+  const getOverallStats = (): AdherenceStats => {
+    if (!query.data) {
       return { taken: 0, missed: 0, skipped: 0, total: 0, rate: 0, streak: 0 };
     }
 
     return {
-      taken: adherence.taken,
-      missed: adherence.missed,
-      skipped: adherence.skipped,
-      total: adherence.totalDoses,
-      rate: adherence.adherenceRate,
-      streak: adherence.currentStreak,
+      taken: query.data.taken,
+      missed: query.data.missed,
+      skipped: query.data.skipped,
+      total: query.data.totalDoses,
+      rate: query.data.adherenceRate,
+      streak: query.data.currentStreak,
     };
-  }, [adherence]);
+  };
 
-  const getMedicationStats = useCallback(
-    (medicationId: string): MedicationAdherence | null => {
-      if (!adherence) return null;
-      return adherence.perMedication.find((m) => m.medicationId === medicationId) || null;
-    },
-    [adherence]
-  );
+  const getMedicationStats = (medicationId: string): MedicationAdherence | null => {
+    if (!query.data) return null;
+    return query.data.perMedication.find((m) => m.medicationId === medicationId) || null;
+  };
 
   return {
-    adherence,
-    loading,
-    error,
-    fetchAdherence,
+    adherence: query.data || null,
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch,
     getOverallStats,
     getMedicationStats,
   };

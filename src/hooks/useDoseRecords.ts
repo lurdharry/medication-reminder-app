@@ -1,58 +1,42 @@
-import { useState, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { doseRecordApi, DoseRecordResponse } from "@/services/api/doseRecordApi";
+import { useAuth } from "@/contexts/AuthContext";
 
-export const useDoseRecords = () => {
-  const [records, setRecords] = useState<DoseRecordResponse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const useDoseRecords = (medicationId?: string) => {
+  const { isAuthenticated } = useAuth();
+  const queryClient = useQueryClient();
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  const query = useQuery({
+    queryKey: ["doseRecords", medicationId],
+    queryFn: async (): Promise<DoseRecordResponse[]> => {
+      if (medicationId) {
+        const response = await doseRecordApi.getHistoryByMedication(medicationId);
+        return response.data.data;
+      }
       const response = await doseRecordApi.getHistory();
-      setRecords(response.data.data);
-    } catch (err: any) {
-      const message = err.response?.data?.message || "Failed to load history";
-      setError(message);
-      console.error("Error loading dose history:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return response.data.data;
+    },
+    enabled: isAuthenticated,
+  });
 
-  const fetchHistoryByMedication = useCallback(async (medicationId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await doseRecordApi.getHistoryByMedication(medicationId);
-      setRecords(response.data.data);
-    } catch (err: any) {
-      const message = err.response?.data?.message || "Failed to load history";
-      setError(message);
-      console.error("Error loading medication history:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const recordDose = useCallback(async (scheduleId: string, status: "taken" | "skipped") => {
-    try {
+  const recordMutation = useMutation({
+    mutationFn: async ({ scheduleId, status }: { scheduleId: string; status: "taken" | "skipped" }) => {
       const response = await doseRecordApi.record(scheduleId, { status });
       return response.data.data;
-    } catch (err: any) {
-      const message = err.response?.data?.message || "Failed to record dose";
-      console.error("Error recording dose:", err);
-      throw new Error(message);
-    }
-  }, []);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["doseRecords"] });
+      queryClient.invalidateQueries({ queryKey: ["adherence"] });
+      queryClient.invalidateQueries({ queryKey: ["medications"] });
+    },
+  });
 
   return {
-    records,
-    loading,
-    error,
-    fetchHistory,
-    fetchHistoryByMedication,
-    recordDose,
+    records: query.data || [],
+    loading: query.isLoading,
+    error: query.error?.message || null,
+    refetch: query.refetch,
+    recordDose: (scheduleId: string, status: "taken" | "skipped") =>
+      recordMutation.mutateAsync({ scheduleId, status }),
   };
 };
