@@ -226,14 +226,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   statValue: {
-    fontSize: FONTS.size.extraLarge,
+    fontSize: FONTS.size.huge,
     fontWeight: "700",
     color: COLORS.primaryDark,
   },
   statLabel: {
-    fontSize: FONTS.size.tiny,
-    color: COLORS.gray.medium,
-    marginTop: 4,
+    fontSize: FONTS.size.small,
+    color: COLORS.gray.dark,
+    marginTop: 6,
+    fontWeight: "500",
   },
 
   // Sections
