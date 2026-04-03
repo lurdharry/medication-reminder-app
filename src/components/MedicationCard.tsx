@@ -1,10 +1,10 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import React, { useState } from "react";
 import { COLORS } from "@/constants/colors";
 import { Medication, MedicationSchedule } from "@/types";
 import { Ionicons } from "@expo/vector-icons";
 import { FONTS } from "@/constants/theme";
-import { StyleSheet } from "react-native";
+import { format } from "date-fns";
 
 interface MedicationCardProps {
   medication: Medication;
@@ -26,63 +26,68 @@ export const MedicationCard = React.memo<MedicationCardProps>((props) => {
   };
 
   return (
-    <TouchableOpacity
-      style={styles.medicationCard}
+    <Pressable
+      style={styles.card}
       onPress={() => setExpanded(!expanded)}
-      activeOpacity={0.7}
     >
       <View style={styles.cardHeader}>
         <View style={styles.cardInfo}>
-          <Text style={styles.medicationName}>{medication.name}</Text>
-          <Text style={styles.medicationDosage}>
-            {medication.dosage}
-            {medication.unit}
+          <Text style={styles.medName}>{medication.name}</Text>
+          <Text style={styles.medDosage}>
+            {medication.dosage}{medication.unit} • {medication.purpose}
           </Text>
         </View>
 
-        <View style={styles.cardActions}>
+        <View style={styles.headerRight}>
           <View style={styles.adherenceBadge}>
             <Text style={styles.adherenceText}>{adherence}%</Text>
           </View>
           <Ionicons
             name={expanded ? "chevron-up" : "chevron-down"}
-            size={24}
-            color={COLORS.gray.medium}
+            size={20}
+            color={COLORS.gray.light}
           />
         </View>
       </View>
 
-      <View style={styles.scheduleSummary}>
+      {/* Schedule chips */}
+      <View style={styles.chipRow}>
         {medication.schedule.map((schedule) => {
           const status = getScheduleStatus(schedule);
           return (
             <View
               key={schedule.id}
               style={[
-                styles.scheduleChip,
-                status === "taken" && styles.scheduleChipTaken,
-                status === "skipped" && styles.scheduleChipSkipped,
+                styles.chip,
+                status === "taken" && styles.chipTaken,
+                status === "skipped" && styles.chipSkipped,
               ]}
             >
+              {status === "taken" && (
+                <Ionicons name="checkmark" size={12} color={COLORS.success} />
+              )}
+              {status === "skipped" && (
+                <Ionicons name="close" size={12} color={COLORS.error} />
+              )}
               <Text
                 style={[
-                  styles.scheduleChipText,
-                  status === "taken" && styles.scheduleChipTextTaken,
-                  status === "skipped" && styles.scheduleChipTextSkipped,
+                  styles.chipText,
+                  status === "taken" && styles.chipTextTaken,
+                  status === "skipped" && styles.chipTextSkipped,
                 ]}
               >
                 {schedule.time}
-                {status === "taken" && " ✓"}
-                {status === "skipped" && " ⏭"}
               </Text>
             </View>
           );
         })}
       </View>
 
+      {/* Expanded section */}
       {expanded && (
-        <View style={styles.cardExpanded}>
-          <Text style={styles.sectionTitle}>Today's Schedule</Text>
+        <View style={styles.expandedSection}>
+          <Text style={styles.expandedTitle}>Today's Schedule</Text>
+
           {medication.schedule.map((schedule) => {
             const status = getScheduleStatus(schedule);
             return (
@@ -90,29 +95,29 @@ export const MedicationCard = React.memo<MedicationCardProps>((props) => {
                 <Text style={styles.scheduleTime}>{schedule.time}</Text>
 
                 {status === "taken" ? (
-                  <View style={styles.statusBadge}>
+                  <View style={styles.statusRow}>
                     <Ionicons name="checkmark-circle" size={16} color={COLORS.success} />
                     <Text style={styles.statusText}>Taken</Text>
                   </View>
                 ) : status === "skipped" ? (
-                  <View style={styles.statusBadge}>
+                  <View style={styles.statusRow}>
                     <Ionicons name="close-circle" size={16} color={COLORS.error} />
                     <Text style={styles.statusText}>Skipped</Text>
                   </View>
                 ) : (
                   <View style={styles.scheduleActions}>
-                    <TouchableOpacity
-                      style={styles.miniTakenButton}
+                    <Pressable
+                      style={styles.takeBtn}
                       onPress={() => onMarkTaken(medication.id, schedule.id, medication.name)}
                     >
-                      <Ionicons name="checkmark" size={16} color={COLORS.white} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.miniSkipButton}
+                      <Ionicons name="checkmark" size={14} color={COLORS.white} />
+                    </Pressable>
+                    <Pressable
+                      style={styles.skipBtn}
                       onPress={() => onMarkSkipped(medication.id, schedule.id, medication.name)}
                     >
-                      <Ionicons name="close" size={16} color={COLORS.error} />
-                    </TouchableOpacity>
+                      <Ionicons name="close" size={14} color={COLORS.gray.medium} />
+                    </Pressable>
                   </View>
                 )}
               </View>
@@ -121,95 +126,116 @@ export const MedicationCard = React.memo<MedicationCardProps>((props) => {
 
           <View style={styles.divider} />
 
-          <View style={styles.detailRow}>
-            <Ionicons name="information-circle-outline" size={20} color={COLORS.gray.dark} />
-            <Text style={styles.detailText}>{medication.purpose}</Text>
-          </View>
-
           {medication.instructions && (
             <View style={styles.detailRow}>
-              <Ionicons name="list-outline" size={20} color={COLORS.gray.dark} />
+              <Ionicons name="document-text-outline" size={16} color={COLORS.gray.medium} />
               <Text style={styles.detailText}>{medication.instructions}</Text>
             </View>
           )}
 
-          <View style={styles.detailRow}>
-            <Ionicons name="calendar-outline" size={20} color={COLORS.gray.dark} />
-            <Text style={styles.detailText}>
-              Refill by: {new Date(medication.refillDate).toLocaleDateString()}
-            </Text>
-          </View>
+          {medication.refillDate && (
+            <View style={styles.detailRow}>
+              <Ionicons name="calendar-outline" size={16} color={COLORS.gray.medium} />
+              <Text style={styles.detailText}>
+                Refill by: {format(new Date(medication.refillDate), "MMM dd, yyyy")}
+              </Text>
+            </View>
+          )}
 
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={[styles.actionButton, styles.editButton]} onPress={onEdit}>
-              <Ionicons name="pencil" size={20} color={COLORS.primary} />
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.actionButton, styles.deleteButton]} onPress={onDelete}>
-              <Ionicons name="trash-outline" size={20} color={COLORS.error} />
-              <Text style={styles.deleteButtonText}>Delete</Text>
-            </TouchableOpacity>
+          <View style={styles.cardButtons}>
+            <Pressable style={styles.editBtn} onPress={onEdit}>
+              <Ionicons name="pencil-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.editBtnText}>Edit</Text>
+            </Pressable>
+            <Pressable style={styles.deleteBtn} onPress={onDelete}>
+              <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </Pressable>
           </View>
         </View>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
-  medicationCard: {
+  card: {
     backgroundColor: COLORS.white,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: COLORS.gray.light,
+    borderColor: COLORS.gray.lighter,
   },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  cardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   cardInfo: { flex: 1 },
-  medicationName: {
+  medName: {
     fontSize: FONTS.size.large,
     fontWeight: "600",
-    color: COLORS.black,
-    marginBottom: 4,
+    color: COLORS.primaryDark,
   },
-  medicationDosage: { fontSize: FONTS.size.medium, color: COLORS.gray.dark },
-  cardActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  medDosage: {
+    fontSize: FONTS.size.small,
+    color: COLORS.gray.medium,
+    marginTop: 2,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   adherenceBadge: {
-    backgroundColor: COLORS.success + "20",
-    paddingHorizontal: 12,
+    backgroundColor: COLORS.tint.green,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  adherenceText: { fontSize: FONTS.size.small, fontWeight: "600", color: COLORS.success },
-  scheduleSummary: { flexDirection: "row", flexWrap: "wrap", marginTop: 12, gap: 8 },
-  scheduleChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: COLORS.gray.light,
+  adherenceText: {
+    fontSize: FONTS.size.small,
+    fontWeight: "600",
+    color: COLORS.success,
   },
-  scheduleChipTaken: { backgroundColor: COLORS.success + "20" },
-  scheduleChipSkipped: { backgroundColor: COLORS.error + "20" },
-  scheduleChipText: { fontSize: FONTS.size.small, color: COLORS.gray.dark },
-  scheduleChipTextTaken: { color: COLORS.success, fontWeight: "600" },
-  scheduleChipTextSkipped: { color: COLORS.error, fontWeight: "600" },
-  cardExpanded: {
+
+  // Chips
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+    gap: 6,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: COLORS.gray.lightest,
+  },
+  chipTaken: { backgroundColor: COLORS.tint.green },
+  chipSkipped: { backgroundColor: COLORS.error + "12" },
+  chipText: {
+    fontSize: FONTS.size.small,
+    color: COLORS.gray.medium,
+  },
+  chipTextTaken: { color: COLORS.success, fontWeight: "500" },
+  chipTextSkipped: { color: COLORS.error, fontWeight: "500" },
+
+  // Expanded
+  expandedSection: {
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.gray.light,
+    borderTopColor: COLORS.gray.lighter,
   },
-  sectionTitle: {
+  expandedTitle: {
     fontSize: FONTS.size.medium,
     fontWeight: "600",
-    color: COLORS.black,
+    color: COLORS.primaryDark,
     marginBottom: 12,
   },
   scheduleRow: {
@@ -218,27 +244,81 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
   },
-  scheduleTime: { fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.black },
-  statusBadge: { flexDirection: "row", alignItems: "center", gap: 6 },
-  statusText: { fontSize: FONTS.size.small, color: COLORS.gray.dark },
+  scheduleTime: {
+    fontSize: FONTS.size.medium,
+    fontWeight: "500",
+    color: COLORS.primaryDark,
+  },
+  statusRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  statusText: { fontSize: FONTS.size.small, color: COLORS.gray.medium },
   scheduleActions: { flexDirection: "row", gap: 8 },
-  miniTakenButton: { backgroundColor: COLORS.success, padding: 8, borderRadius: 6 },
-  miniSkipButton: { backgroundColor: COLORS.error + "20", padding: 8, borderRadius: 6 },
-  divider: { height: 1, backgroundColor: COLORS.gray.light, marginVertical: 16 },
-  detailRow: { flexDirection: "row", alignItems: "center", marginBottom: 12, gap: 12 },
-  detailText: { fontSize: FONTS.size.medium, color: COLORS.gray.dark, flex: 1 },
-  actionButtons: { flexDirection: "row", marginTop: 16, gap: 12 },
-  actionButton: {
+  takeBtn: {
+    backgroundColor: COLORS.success,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  skipBtn: {
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.gray.lighter,
+    marginVertical: 14,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    gap: 10,
+  },
+  detailText: {
+    fontSize: FONTS.size.small,
+    color: COLORS.gray.medium,
+    flex: 1,
+  },
+  cardButtons: {
+    flexDirection: "row",
+    marginTop: 14,
+    gap: 10,
+  },
+  editBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: COLORS.tint.pink,
+    gap: 6,
   },
-  editButton: { backgroundColor: COLORS.primary + "15" },
-  editButtonText: { color: COLORS.primary, fontSize: FONTS.size.medium, fontWeight: "600" },
-  deleteButton: { backgroundColor: COLORS.error + "15" },
-  deleteButtonText: { color: COLORS.error, fontSize: FONTS.size.medium, fontWeight: "600" },
+  editBtnText: {
+    color: COLORS.primary,
+    fontSize: FONTS.size.small,
+    fontWeight: "600",
+  },
+  deleteBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
+    gap: 6,
+  },
+  deleteBtnText: {
+    color: COLORS.error,
+    fontSize: FONTS.size.small,
+    fontWeight: "600",
+  },
 });
