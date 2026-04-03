@@ -6,14 +6,13 @@ import { NavigationContainer } from "@react-navigation/native";
 import * as Notifications from "expo-notifications";
 
 import { MedicationProvider } from "./src/contexts/MedicationContext";
-
 import { COLORS } from "@/constants/colors";
-import { Storage } from "@/services/storage";
-import { STORAGE_KEYS } from "@/constants/storage";
 import { RootNavigator } from "@/navigation/RootNavigator";
+import { TokenManager } from "@/services/api";
+import { userApi } from "@/services/api/userApi";
 
 export default function App() {
-  const [hasUser, setHasUser] = useState<boolean | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
     async function prepare() {
@@ -23,20 +22,25 @@ export default function App() {
           console.warn("Notification permissions not granted");
         }
 
-        const user = await Storage.getObject(STORAGE_KEYS.USER);
-        setHasUser(!!user);
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        const token = TokenManager.getToken();
+        if (token) {
+          // Validate token by calling the API
+          await userApi.getProfile();
+          setIsAuthenticated(true);
+        } else {
+          setIsAuthenticated(false);
+        }
       } catch (e) {
-        console.warn("App preparation error:", e);
-        setHasUser(false);
+        // Token invalid or expired
+        TokenManager.clearToken();
+        setIsAuthenticated(false);
       }
     }
 
     prepare();
   }, []);
 
-  if (hasUser === null) {
+  if (isAuthenticated === null) {
     return null;
   }
 
@@ -45,7 +49,7 @@ export default function App() {
       <MedicationProvider>
         <NavigationContainer>
           <StatusBar barStyle="dark-content" backgroundColor={COLORS.background.primary} />
-          <RootNavigator hasUser={hasUser} />
+          <RootNavigator hasUser={isAuthenticated} />
         </NavigationContainer>
       </MedicationProvider>
     </SafeAreaProvider>
