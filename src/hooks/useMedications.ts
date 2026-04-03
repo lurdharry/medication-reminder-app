@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import { medicationApi, MedicationResponse } from "@/services/api/medicationApi";
 import { doseScheduleApi, DoseScheduleResponse } from "@/services/api/doseScheduleApi";
 import { doseRecordApi } from "@/services/api/doseRecordApi";
@@ -79,9 +80,9 @@ export const useMedications = () => {
         unit: input.unit,
         purpose: input.purpose,
         instruction: input.instructions,
-        startDate: input.startDate?.toISOString().split("T")[0],
-        endDate: input.endDate?.toISOString().split("T")[0],
-        refillDate: input.refillDate?.toISOString().split("T")[0],
+        startDate: input.startDate ? format(input.startDate, "yyyy-MM-dd") : undefined,
+        endDate: input.endDate ? format(input.endDate, "yyyy-MM-dd") : undefined,
+        refillDate: input.refillDate ? format(input.refillDate, "yyyy-MM-dd") : undefined,
         prescribedBy: input.prescribedBy,
         pharmacyInfo: input.pharmacyInfo,
         imageUrl: input.imageUri,

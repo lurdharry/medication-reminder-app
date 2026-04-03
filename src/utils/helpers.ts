@@ -1,5 +1,6 @@
 import { differenceInDays } from "date-fns/differenceInDays";
 import { format } from "date-fns/format";
+import { getHours } from "date-fns";
 
 /**
  * Generate a unique ID
@@ -36,7 +37,7 @@ export const timeToMinutes = (timeString: string): number => {
  * Get time of day (morning, afternoon, evening, night)
  */
 export const getTimeOfDay = (): string => {
-  const hour = new Date().getHours();
+  const hour = getHours(new Date());
 
   if (hour >= 5 && hour < 12) return "morning";
   if (hour >= 12 && hour < 17) return "afternoon";

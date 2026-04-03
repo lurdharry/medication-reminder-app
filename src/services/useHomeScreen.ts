@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { COLORS } from "@/constants/colors";
@@ -35,10 +36,7 @@ export const useHomeScreen = () => {
 
   const pendingDoses = useMemo(() => {
     const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}`;
+    const currentTime = format(now, "HH:mm");
 
     const pending: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
 
@@ -55,10 +53,7 @@ export const useHomeScreen = () => {
 
   const upcomingDoses = useMemo(() => {
     const now = new Date();
-    const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")}`;
+    const currentTime = format(now, "HH:mm");
 
     const upcoming: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
 
