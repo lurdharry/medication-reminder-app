@@ -13,14 +13,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMedicationContext } from "../contexts/MedicationContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useInteractionLogger } from "../hooks/useInteractionLogger";
+import { aiApi } from "@/services/api/aiApi";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 
 export const SettingsScreen: React.FC = () => {
   const { userPreferences, updatePreferences } = useMedicationContext();
   const { user, logout } = useAuth();
-  const { exportLogsAsJSON, clearLogs, getLogSummary } = useInteractionLogger();
 
   const [userName, setUserName] = useState(user?.name || "");
 
@@ -35,34 +34,17 @@ export const SettingsScreen: React.FC = () => {
     await updatePreferences({ [key]: value });
   };
 
-  const handleExportData = async () => {
-    try {
-      const summary = await getLogSummary();
-      const json = await exportLogsAsJSON(true);
-
-      Alert.alert(
-        "Export Data",
-        `Total interactions: ${
-          summary?.totalVoiceInteractions || 0
-        }\n\nData has been prepared. In production, this would be saved to a file.`,
-        [{ text: "OK" }]
-      );
-    } catch (error) {
-      Alert.alert("Error", "Could not export data");
-    }
-  };
-
   const handleClearHistory = () => {
     Alert.alert(
       "Clear History",
-      "Are you sure? This will delete all conversation and interaction logs.",
+      "Are you sure? This will delete all conversation logs.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Clear",
           style: "destructive",
           onPress: async () => {
-            await clearLogs();
+            await aiApi.clearConversation();
             Alert.alert("Success", "History cleared");
           },
         },
@@ -326,11 +308,6 @@ export const SettingsScreen: React.FC = () => {
               trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
             />
           </View>
-
-          <TouchableOpacity style={styles.actionButton} onPress={handleExportData}>
-            <Ionicons name="download" size={20} color={COLORS.primary} />
-            <Text style={styles.actionButtonText}>Export My Data</Text>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.dangerButton]}
