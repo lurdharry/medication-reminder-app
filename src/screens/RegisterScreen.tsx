@@ -7,7 +7,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,6 +19,7 @@ import { authApi } from "@/services/api/authApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { registerSchema } from "@/utils/validation/authValidation";
 import { FormInput } from "@/components/FormInput";
+import { Button } from "@/components/Button";
 
 interface RegisterFormValues {
   name: string;
@@ -134,20 +134,13 @@ export const RegisterScreen: React.FC = () => {
                   touched={touched.confirmPassword}
                 />
 
-                <Pressable
-                  style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                <Button
+                  title="Create Account"
+                  rightIcon="arrow-forward"
+                  loading={isSubmitting}
                   onPress={() => handleSubmit()}
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator color={COLORS.white} />
-                  ) : (
-                    <>
-                      <Text style={styles.buttonText}>Create Account</Text>
-                      <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
-                    </>
-                  )}
-                </Pressable>
+                  style={styles.button}
+                />
               </View>
 
               <View style={styles.footer}>
@@ -195,22 +188,7 @@ const styles = StyleSheet.create({
     marginBottom: DIMENSIONS.SPACING.xl,
   },
   button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    padding: DIMENSIONS.PADDING_LARGE,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: DIMENSIONS.SPACING.sm,
     marginTop: DIMENSIONS.SPACING.md,
-  },
-  buttonDisabled: {
-    opacity: 0.7,
-  },
-  buttonText: {
-    color: COLORS.white,
-    fontSize: FONTS.size.large,
-    fontWeight: "700",
   },
   footer: {
     flexDirection: "row",
