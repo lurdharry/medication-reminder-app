@@ -14,59 +14,43 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { Formik } from "formik";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { authApi } from "@/services/api/authApi";
 import { useAuth } from "@/contexts/AuthContext";
+import { registerSchema } from "@/utils/validation/authValidation";
 
-interface RegisterFormState {
+interface RegisterFormValues {
   name: string;
   email: string;
   password: string;
   confirmPassword: string;
 }
 
+const initialValues: RegisterFormValues = {
+  name: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
+
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { setAuthenticated } = useAuth();
-  const [form, setForm] = useState<RegisterFormState>({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleRegister = async () => {
-    if (!form.name.trim() || !form.email.trim() || !form.password.trim()) {
-      Alert.alert("Error", "Please fill in all required fields");
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
-      return;
-    }
-
-    if (form.password.length < 6) {
-      Alert.alert("Error", "Password must be at least 6 characters");
-      return;
-    }
-
+  const handleRegister = async (values: RegisterFormValues) => {
     try {
-      setLoading(true);
-
       await authApi.register({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        password: form.password.trim(),
+        name: values.name.trim(),
+        email: values.email.trim(),
+        password: values.password.trim(),
       });
 
-      // Auto-login after registration
       const loginResponse = await authApi.login({
-        email: form.email.trim(),
-        password: form.password.trim(),
+        email: values.email.trim(),
+        password: values.password.trim(),
       });
 
       const { accessToken } = loginResponse.data.data;
@@ -75,8 +59,6 @@ export const RegisterScreen: React.FC = () => {
       const message =
         error.response?.data?.message || "Registration failed. Please try again.";
       Alert.alert("Registration Failed", message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -86,101 +68,123 @@ export const RegisterScreen: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Ionicons name="medical" size={64} color={COLORS.primary} />
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join MediRemind today</Text>
-          </View>
+        <Formik
+          initialValues={initialValues}
+          validationSchema={registerSchema}
+          onSubmit={handleRegister}
+        >
+          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
+            <ScrollView contentContainerStyle={styles.scrollContent}>
+              <View style={styles.header}>
+                <Ionicons name="medical" size={64} color={COLORS.primary} />
+                <Text style={styles.title}>Create Account</Text>
+                <Text style={styles.subtitle}>Join MediRemind today</Text>
+              </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Full Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={form.name}
-                onChangeText={(text) => setForm({ ...form, name: text })}
-                placeholder="Enter your full name"
-                placeholderTextColor={COLORS.gray.medium}
-                autoCapitalize="words"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email *</Text>
-              <TextInput
-                style={styles.input}
-                value={form.email}
-                onChangeText={(text) => setForm({ ...form, email: text })}
-                placeholder="Enter your email"
-                placeholderTextColor={COLORS.gray.medium}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password *</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={form.password}
-                  onChangeText={(text) => setForm({ ...form, password: text })}
-                  placeholder="Enter your password"
-                  placeholderTextColor={COLORS.gray.medium}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={22}
-                    color={COLORS.gray.medium}
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Full Name *</Text>
+                  <TextInput
+                    style={[styles.input, touched.name && errors.name && styles.inputError]}
+                    value={values.name}
+                    onChangeText={handleChange("name")}
+                    onBlur={handleBlur("name")}
+                    placeholder="Enter your full name"
+                    placeholderTextColor={COLORS.gray.medium}
+                    autoCapitalize="words"
                   />
+                  {touched.name && errors.name && (
+                    <Text style={styles.errorText}>{errors.name}</Text>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email *</Text>
+                  <TextInput
+                    style={[styles.input, touched.email && errors.email && styles.inputError]}
+                    value={values.email}
+                    onChangeText={handleChange("email")}
+                    onBlur={handleBlur("email")}
+                    placeholder="Enter your email"
+                    placeholderTextColor={COLORS.gray.medium}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {touched.email && errors.email && (
+                    <Text style={styles.errorText}>{errors.email}</Text>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Password *</Text>
+                  <View style={[styles.passwordContainer, touched.password && errors.password && styles.inputError]}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={values.password}
+                      onChangeText={handleChange("password")}
+                      onBlur={handleBlur("password")}
+                      placeholder="Enter your password"
+                      placeholderTextColor={COLORS.gray.medium}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off" : "eye"}
+                        size={22}
+                        color={COLORS.gray.medium}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {touched.password && errors.password && (
+                    <Text style={styles.errorText}>{errors.password}</Text>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Confirm Password *</Text>
+                  <TextInput
+                    style={[styles.input, touched.confirmPassword && errors.confirmPassword && styles.inputError]}
+                    value={values.confirmPassword}
+                    onChangeText={handleChange("confirmPassword")}
+                    onBlur={handleBlur("confirmPassword")}
+                    placeholder="Confirm your password"
+                    placeholderTextColor={COLORS.gray.medium}
+                    secureTextEntry={!showPassword}
+                  />
+                  {touched.confirmPassword && errors.confirmPassword && (
+                    <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                  onPress={() => handleSubmit()}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={COLORS.white} />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>Create Account</Text>
+                      <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Confirm Password *</Text>
-              <TextInput
-                style={styles.input}
-                value={form.confirmPassword}
-                onChangeText={(text) =>
-                  setForm({ ...form, confirmPassword: text })
-                }
-                placeholder="Confirm your password"
-                placeholderTextColor={COLORS.gray.medium}
-                secureTextEntry={!showPassword}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleRegister}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <>
-                  <Text style={styles.buttonText}>Create Account</Text>
-                  <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.footerLink}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Already have an account?</Text>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                  <Text style={styles.footerLink}>Sign In</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          )}
+        </Formik>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -233,6 +237,14 @@ const styles = StyleSheet.create({
     color: COLORS.gray.darkest,
     borderWidth: 1,
     borderColor: COLORS.gray.light,
+  },
+  inputError: {
+    borderColor: COLORS.error,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: FONTS.size.small,
+    marginTop: DIMENSIONS.SPACING.xs,
   },
   passwordContainer: {
     flexDirection: "row",

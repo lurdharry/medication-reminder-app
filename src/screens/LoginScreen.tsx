@@ -13,37 +13,33 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { Formik } from "formik";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { authApi } from "@/services/api/authApi";
 import { useAuth } from "@/contexts/AuthContext";
+import { loginSchema } from "@/utils/validation/authValidation";
 
-interface LoginFormState {
+interface LoginFormValues {
   email: string;
   password: string;
 }
 
+const initialValues: LoginFormValues = {
+  email: "john@mediremind.com",
+  password: "secure123",
+};
+
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const { setAuthenticated } = useAuth();
-  const [form, setForm] = useState<LoginFormState>({
-    email: "john@mediremind.com",
-    password: "secure123",
-  });
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = async () => {
-    if (!form.email.trim() || !form.password.trim()) {
-      Alert.alert("Error", "Please enter your email and password");
-      return;
-    }
-
+  const handleLogin = async (values: LoginFormValues) => {
     try {
-      setLoading(true);
       const response = await authApi.login({
-        email: form.email.trim(),
-        password: form.password.trim(),
+        email: values.email.trim(),
+        password: values.password.trim(),
       });
 
       const { accessToken } = response.data.data;
@@ -51,8 +47,6 @@ export const LoginScreen: React.FC = () => {
     } catch (error: any) {
       const message = error.response?.data?.message || "Login failed. Please try again.";
       Alert.alert("Login Failed", message);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -62,75 +56,91 @@ export const LoginScreen: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <Ionicons name="medical" size={64} color={COLORS.primary} />
-            <Text style={styles.title}>MediRemind</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
-          </View>
+        <Formik
+          initialValues={initialValues}
+          validationSchema={loginSchema}
+          onSubmit={handleLogin}
+        >
+          {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
+            <View style={styles.content}>
+              <View style={styles.header}>
+                <Ionicons name="medical" size={64} color={COLORS.primary} />
+                <Text style={styles.title}>MediRemind</Text>
+                <Text style={styles.subtitle}>Sign in to your account</Text>
+              </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={form.email}
-                onChangeText={(text) => setForm({ ...form, email: text })}
-                placeholder="Enter your email"
-                placeholderTextColor={COLORS.gray.medium}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  value={form.password}
-                  onChangeText={(text) => setForm({ ...form, password: text })}
-                  placeholder="Enter your password"
-                  placeholderTextColor={COLORS.gray.medium}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeButton}
-                >
-                  <Ionicons
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={22}
-                    color={COLORS.gray.medium}
+              <View style={styles.form}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Email</Text>
+                  <TextInput
+                    style={[styles.input, touched.email && errors.email && styles.inputError]}
+                    value={values.email}
+                    onChangeText={handleChange("email")}
+                    onBlur={handleBlur("email")}
+                    placeholder="Enter your email"
+                    placeholderTextColor={COLORS.gray.medium}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
                   />
+                  {touched.email && errors.email && (
+                    <Text style={styles.errorText}>{errors.email}</Text>
+                  )}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Password</Text>
+                  <View style={[styles.passwordContainer, touched.password && errors.password && styles.inputError]}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      value={values.password}
+                      onChangeText={handleChange("password")}
+                      onBlur={handleBlur("password")}
+                      placeholder="Enter your password"
+                      placeholderTextColor={COLORS.gray.medium}
+                      secureTextEntry={!showPassword}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeButton}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off" : "eye"}
+                        size={22}
+                        color={COLORS.gray.medium}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {touched.password && errors.password && (
+                    <Text style={styles.errorText}>{errors.password}</Text>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.button, isSubmitting && styles.buttonDisabled]}
+                  onPress={() => handleSubmit()}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator color={COLORS.white} />
+                  ) : (
+                    <>
+                      <Text style={styles.buttonText}>Sign In</Text>
+                      <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don't have an account?</Text>
+                <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+                  <Text style={styles.footerLink}>Sign Up</Text>
                 </TouchableOpacity>
               </View>
             </View>
-
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <>
-                  <Text style={styles.buttonText}>Sign In</Text>
-                  <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
-            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-              <Text style={styles.footerLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          )}
+        </Formik>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -184,6 +194,14 @@ const styles = StyleSheet.create({
     color: COLORS.gray.darkest,
     borderWidth: 1,
     borderColor: COLORS.gray.light,
+  },
+  inputError: {
+    borderColor: COLORS.error,
+  },
+  errorText: {
+    color: COLORS.error,
+    fontSize: FONTS.size.small,
+    marginTop: DIMENSIONS.SPACING.xs,
   },
   passwordContainer: {
     flexDirection: "row",
