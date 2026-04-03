@@ -1,14 +1,18 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useVoice } from "./useVoice";
 import aiVoiceAssistant from "../services/aiVoiceAssistant";
-import medicationService from "../services/medicationService";
+import { doseRecordApi } from "../services/api/doseRecordApi";
+import { useMedications } from "./useMedications";
 import { useMedicationContext } from "../contexts/MedicationContext";
+import { useAuth } from "../contexts/AuthContext";
 import { useInteractionLogger } from "./useInteractionLogger";
 import { ChatMessage, Intent, UserIntent } from "../types";
 import { generateId } from "../utils/helpers";
 
 export const useAIAssistant = () => {
-  const { medications, addMedication, getUserPreferences, user } = useMedicationContext();
+  const { medications, addMedication } = useMedications();
+  const { getUserPreferences } = useMedicationContext();
+  const { user } = useAuth();
   const {
     isListening,
     transcript,
@@ -74,7 +78,6 @@ export const useAIAssistant = () => {
           userPreferences: preferences,
           currentTime: new Date(),
           userName: user?.name,
-          age: user?.age,
         });
 
         // Execute intent if needed
@@ -102,7 +105,7 @@ export const useAIAssistant = () => {
           context: {
             currentScreen: "AIAssistant",
             medicationsCount: medications.length,
-            pendingDoses: medicationService.getPendingDoses().length,
+            pendingDoses: 0,
           },
         });
 
@@ -129,7 +132,7 @@ export const useAIAssistant = () => {
           context: {
             currentScreen: "AIAssistant",
             medicationsCount: medications.length,
-            pendingDoses: medicationService.getPendingDoses().length,
+            pendingDoses: 0,
           },
         });
       }
@@ -243,25 +246,15 @@ export const useAIAssistant = () => {
     async (intent: Intent) => {
       const { medicationName, dosage, unit, times, purpose, instructions } = intent.entities;
 
-      const newMedication = {
-        id: generateId(),
-        name: medicationName,
-        dosage,
-        unit,
-        schedule: times?.map((time: string) => ({
-          id: generateId(),
-          time,
-          taken: false,
-          skipped: false,
-        })),
+      await addMedication({
+        name: medicationName || "",
+        dosage: dosage || "",
+        unit: unit || "mg",
         purpose: purpose || "",
         instructions: instructions || "",
         startDate: new Date(),
-        refillDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-        adherenceRate: 0,
-      };
-
-      await addMedication(newMedication);
+        schedule: times?.map((time: string) => ({ time })),
+      });
       console.log("Medication added via voice:", medicationName);
     },
     [addMedication]
@@ -286,7 +279,7 @@ export const useAIAssistant = () => {
       const pendingSchedule = medication.schedule.find((s) => !s.taken && !s.skipped);
 
       if (pendingSchedule) {
-        await medicationService.markDoseTaken(medication.id, pendingSchedule.id);
+        await doseRecordApi.record(pendingSchedule.id, { status: "taken" });
         console.log("Marked as taken:", medication.name);
       }
     },
@@ -312,7 +305,7 @@ export const useAIAssistant = () => {
       const pendingSchedule = medication.schedule.find((s) => !s.taken && !s.skipped);
 
       if (pendingSchedule) {
-        await medicationService.markDoseSkipped(medication.id, pendingSchedule.id, reason);
+        await doseRecordApi.record(pendingSchedule.id, { status: "skipped" });
         console.log("Marked as skipped:", medication.name);
       }
     },

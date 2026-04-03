@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 
-import medicationService from "./medicationService";
+import { doseRecordApi } from "./api/doseRecordApi";
 
 import {
   Medication,
@@ -456,7 +456,7 @@ class NotificationService {
     scheduleId: string,
     medicationName: string
   ): Promise<void> {
-    await medicationService.markDoseTaken(medicationId, scheduleId);
+    await doseRecordApi.record(scheduleId, { status: "taken" });
 
     if (this.callbacks.onMedicationTaken) {
       await this.callbacks.onMedicationTaken(medicationId);
@@ -494,7 +494,7 @@ class NotificationService {
     scheduleId: string,
     medicationName: string
   ): Promise<void> {
-    await medicationService.markDoseSkipped(medicationId, scheduleId);
+    await doseRecordApi.record(scheduleId, { status: "skipped" });
 
     if (this.callbacks.onMedicationSkipped) {
       await this.callbacks.onMedicationSkipped(medicationId);
