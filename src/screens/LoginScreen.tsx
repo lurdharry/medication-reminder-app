@@ -16,7 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { authApi } from "@/services/api/authApi";
-import { TokenManager } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LoginFormState {
   email: string;
@@ -25,9 +25,10 @@ interface LoginFormState {
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { setAuthenticated } = useAuth();
   const [form, setForm] = useState<LoginFormState>({
-    email: "",
-    password: "",
+    email: "john@mediremind.com",
+    password: "secure123",
   });
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -46,16 +47,9 @@ export const LoginScreen: React.FC = () => {
       });
 
       const { accessToken } = response.data.data;
-      TokenManager.setToken(accessToken);
-
-      // Reload the app by triggering a re-render at root level
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Main" }],
-      });
+      setAuthenticated(accessToken);
     } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Login failed. Please try again.";
+      const message = error.response?.data?.message || "Login failed. Please try again.";
       Alert.alert("Login Failed", message);
     } finally {
       setLoading(false);

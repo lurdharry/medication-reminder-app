@@ -17,7 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { authApi } from "@/services/api/authApi";
-import { TokenManager } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RegisterFormState {
   name: string;
@@ -28,6 +28,7 @@ interface RegisterFormState {
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
+  const { setAuthenticated } = useAuth();
   const [form, setForm] = useState<RegisterFormState>({
     name: "",
     email: "",
@@ -69,12 +70,7 @@ export const RegisterScreen: React.FC = () => {
       });
 
       const { accessToken } = loginResponse.data.data;
-      TokenManager.setToken(accessToken);
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Main" }],
-      });
+      setAuthenticated(accessToken);
     } catch (error: any) {
       const message =
         error.response?.data?.message || "Registration failed. Please try again.";
