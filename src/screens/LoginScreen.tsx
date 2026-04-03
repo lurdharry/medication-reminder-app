@@ -3,8 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { authApi } from "@/services/api/authApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { loginSchema } from "@/utils/validation/authValidation";
+import { FormInput } from "@/components/FormInput";
 
 interface LoginFormValues {
   email: string;
@@ -26,8 +26,8 @@ interface LoginFormValues {
 }
 
 const initialValues: LoginFormValues = {
-  email: "john@mediremind.com",
-  password: "secure123",
+  email: "",
+  password: "",
 };
 
 export const LoginScreen: React.FC = () => {
@@ -70,53 +70,35 @@ export const LoginScreen: React.FC = () => {
               </View>
 
               <View style={styles.form}>
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Email</Text>
-                  <TextInput
-                    style={[styles.input, touched.email && errors.email && styles.inputError]}
-                    value={values.email}
-                    onChangeText={handleChange("email")}
-                    onBlur={handleBlur("email")}
-                    placeholder="Enter your email"
-                    placeholderTextColor={COLORS.gray.medium}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                  {touched.email && errors.email && (
-                    <Text style={styles.errorText}>{errors.email}</Text>
-                  )}
-                </View>
+                <FormInput
+                  label="Email"
+                  leftIcon="mail-outline"
+                  value={values.email}
+                  onChangeText={handleChange("email")}
+                  onBlur={handleBlur("email")}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={errors.email}
+                  touched={touched.email}
+                />
 
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Password</Text>
-                  <View style={[styles.passwordContainer, touched.password && errors.password && styles.inputError]}>
-                    <TextInput
-                      style={styles.passwordInput}
-                      value={values.password}
-                      onChangeText={handleChange("password")}
-                      onBlur={handleBlur("password")}
-                      placeholder="Enter your password"
-                      placeholderTextColor={COLORS.gray.medium}
-                      secureTextEntry={!showPassword}
-                    />
-                    <TouchableOpacity
-                      onPress={() => setShowPassword(!showPassword)}
-                      style={styles.eyeButton}
-                    >
-                      <Ionicons
-                        name={showPassword ? "eye-off" : "eye"}
-                        size={22}
-                        color={COLORS.gray.medium}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {touched.password && errors.password && (
-                    <Text style={styles.errorText}>{errors.password}</Text>
-                  )}
-                </View>
+                <FormInput
+                  label="Password"
+                  leftIcon="lock-closed-outline"
+                  rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+                  onRightIconPress={() => setShowPassword(!showPassword)}
+                  value={values.password}
+                  onChangeText={handleChange("password")}
+                  onBlur={handleBlur("password")}
+                  placeholder="Enter your password"
+                  secureTextEntry={!showPassword}
+                  error={errors.password}
+                  touched={touched.password}
+                />
 
-                <TouchableOpacity
+                <Pressable
                   style={[styles.button, isSubmitting && styles.buttonDisabled]}
                   onPress={() => handleSubmit()}
                   disabled={isSubmitting}
@@ -129,14 +111,14 @@ export const LoginScreen: React.FC = () => {
                       <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
                     </>
                   )}
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <View style={styles.footer}>
                 <Text style={styles.footerText}>Don't have an account?</Text>
-                <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+                <Pressable onPress={() => navigation.navigate("Register")}>
                   <Text style={styles.footerLink}>Sign Up</Text>
-                </TouchableOpacity>
+                </Pressable>
               </View>
             </View>
           )}
@@ -176,49 +158,6 @@ const styles = StyleSheet.create({
   },
   form: {
     marginBottom: DIMENSIONS.SPACING.xl,
-  },
-  inputGroup: {
-    marginBottom: DIMENSIONS.SPACING.lg,
-  },
-  label: {
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-    color: COLORS.gray.darkest,
-    marginBottom: DIMENSIONS.SPACING.sm,
-  },
-  input: {
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    padding: DIMENSIONS.PADDING,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.darkest,
-    borderWidth: 1,
-    borderColor: COLORS.gray.light,
-  },
-  inputError: {
-    borderColor: COLORS.error,
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: FONTS.size.small,
-    marginTop: DIMENSIONS.SPACING.xs,
-  },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    borderWidth: 1,
-    borderColor: COLORS.gray.light,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: DIMENSIONS.PADDING,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.darkest,
-  },
-  eyeButton: {
-    padding: DIMENSIONS.PADDING,
   },
   button: {
     backgroundColor: COLORS.primary,
