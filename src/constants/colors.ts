@@ -1,27 +1,30 @@
 export const COLORS = {
-  primary: "#4A90E2",
+  primary: "#2A9D8F",
+  primaryDark: "#264653",
+  primaryLight: "#3DB4A6",
+  accent: "#E9C46A",
 
   // Status Colors
-  success: "#4CAF50",
-  warning: "#FFA726",
-  error: "#EF5350",
-  info: "#29B6F6",
+  success: "#2A9D8F",
+  warning: "#E9C46A",
+  error: "#E76F51",
+  info: "#3DB4A6",
 
-  black: "#000000",
+  black: "#1A1A2E",
   white: "#FFFFFF",
   gray: {
-    darkest: "#212121",
-    dark: "#424242",
-    medium: "#757575",
-    light: "#BDBDBD",
-    lighter: "#E0E0E0",
-    lightest: "#F5F5F5",
+    darkest: "#2D3436",
+    dark: "#4A5568",
+    medium: "#718096",
+    light: "#CBD5E0",
+    lighter: "#E2E8F0",
+    lightest: "#F7FAFC",
   },
 
   background: {
-    primary: "#FFFFFF",
-    secondary: "#F8F9FA",
-    tertiary: "#F0F2F5",
-    dark: "#1E1E1E",
+    primary: "#FAFAF7",
+    secondary: "#F0F4F3",
+    tertiary: "#E8EEEC",
+    dark: "#264653",
   },
 };
