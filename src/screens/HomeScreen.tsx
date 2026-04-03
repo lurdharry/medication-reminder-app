@@ -106,7 +106,7 @@ export const HomeScreen: React.FC = () => {
           onPress={() => navigation.navigate("Assistant")}
         >
           <View style={styles.aiIconBg}>
-            <Ionicons name="mic" size={22} color={COLORS.primary} />
+            <Ionicons name="mic" size={22} color={COLORS.primaryDark} />
           </View>
           <View style={styles.aiCardText}>
             <Text style={styles.aiCardTitle}>AI Assistant</Text>
@@ -119,8 +119,8 @@ export const HomeScreen: React.FC = () => {
         {insights && insights.suggestions.length > 0 && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <View style={[styles.statIconBg, { backgroundColor: COLORS.accent + "20" }]}>
-                <Ionicons name="bulb" size={16} color={COLORS.accent} />
+              <View style={[styles.statIconBg, { backgroundColor: COLORS.tint.peach }]}>
+                <Ionicons name="bulb" size={16} color={COLORS.warning} />
               </View>
               <Text style={styles.cardTitle}>Insights</Text>
             </View>
@@ -132,7 +132,7 @@ export const HomeScreen: React.FC = () => {
             ))}
             <Pressable style={styles.linkButton} onPress={handleViewAnalytics}>
               <Text style={styles.linkText}>View Full Report</Text>
-              <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
+              <Ionicons name="arrow-forward" size={14} color={COLORS.primaryDark} />
             </Pressable>
           </View>
         )}
@@ -168,14 +168,18 @@ export const HomeScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionGrid}>
-            {quickActions.map((item) => (
-              <Pressable style={styles.actionButton} onPress={item.onPress} key={item.id}>
-                <View style={[styles.actionIconBg, { backgroundColor: COLORS.primary + "10" }]}>
-                  <Ionicons name={item.icon} size={22} color={COLORS.primary} />
-                </View>
-                <Text style={styles.actionLabel}>{item.label}</Text>
-              </Pressable>
-            ))}
+            {quickActions.map((item, index) => {
+              const tints = [COLORS.tint.pink, COLORS.tint.blue, COLORS.tint.peach, COLORS.tint.purple];
+              const tint = tints[index % tints.length];
+              return (
+                <Pressable style={styles.actionButton} onPress={item.onPress} key={item.id}>
+                  <View style={[styles.actionIconBg, { backgroundColor: tint }]}>
+                    <Ionicons name={item.icon} size={22} color={COLORS.primaryDark} />
+                  </View>
+                  <Text style={styles.actionLabel}>{item.label}</Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
@@ -276,7 +280,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timeChip: {
-    backgroundColor: COLORS.primary + "12",
+    backgroundColor: COLORS.tint.blue,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
@@ -284,7 +288,7 @@ const styles = StyleSheet.create({
   timeChipText: {
     fontSize: FONTS.size.small,
     fontWeight: "600",
-    color: COLORS.primary,
+    color: COLORS.primaryDark,
   },
   timeChipMuted: {
     backgroundColor: COLORS.gray.lightest,
@@ -310,7 +314,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.success,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -334,14 +338,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.primary + "30",
+    borderColor: COLORS.gray.lighter,
     gap: 14,
   },
   aiIconBg: {
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: COLORS.primary + "12",
+    backgroundColor: COLORS.tint.purple,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -388,7 +392,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryDark,
     marginTop: 7,
   },
   insightText: {
@@ -404,7 +408,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   linkText: {
-    color: COLORS.primary,
+    color: COLORS.primaryDark,
     fontSize: FONTS.size.small,
     fontWeight: "600",
   },
