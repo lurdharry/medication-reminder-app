@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import * as Speech from "expo-speech";
 import { useVoice } from "./useVoice";
-import aiVoiceAssistant from "../services/aiVoiceAssistant";
+import { aiApi } from "../services/api/aiApi";
 import { doseRecordApi } from "../services/api/doseRecordApi";
 import { useMedications } from "./useMedications";
-import { useMedicationContext } from "../contexts/MedicationContext";
 import { useAuth } from "../contexts/AuthContext";
 import { useInteractionLogger } from "./useInteractionLogger";
 import { ChatMessage, Intent, UserIntent } from "../types";
@@ -11,7 +11,6 @@ import { generateId } from "../utils/helpers";
 
 export const useAIAssistant = () => {
   const { medications, addMedication } = useMedications();
-  const { getUserPreferences } = useMedicationContext();
   const { user } = useAuth();
   const {
     isListening,
@@ -33,18 +32,12 @@ export const useAIAssistant = () => {
   const startTimeRef = useRef<number>(0);
   const processingRef = useRef(false);
 
-  /**
-   * Update error state from voice hook
-   */
   useEffect(() => {
     if (voiceError) {
       setError(voiceError);
     }
   }, [voiceError]);
 
-  /**
-   * Add a message to conversation
-   */
   const addMessage = useCallback((type: "user" | "assistant", text: string, intent?: string) => {
     const message: ChatMessage = {
       id: generateId(),
@@ -57,49 +50,39 @@ export const useAIAssistant = () => {
     return message;
   }, []);
 
-  /**
-   * Process the transcribed text
-   */
   const processTranscript = useCallback(
     async (transcribedText: string) => {
       try {
         setIsProcessing(true);
         setError(null);
 
-        // Add user message to chat
         addMessage("user", transcribedText);
 
-        // Get user preferences and context
-        const preferences = await getUserPreferences();
+        const response = await aiApi.chat({ message: transcribedText });
+        const aiData = response.data.data;
 
-        // Process with AI
-        const response = await aiVoiceAssistant.processUserInput(transcribedText, {
-          medications,
-          userPreferences: preferences,
-          currentTime: new Date(),
-          userName: user?.name,
-        });
+        const intent: Intent = {
+          action: (aiData.intent as UserIntent) || UserIntent.GENERAL_QUESTION,
+          entities: aiData.data || {},
+          confidence: 0.9,
+        };
 
-        // Execute intent if needed
-        if (response.shouldExecute) {
-          await executeIntent(response.intent);
+        if (aiData.intent !== "GREETING" && aiData.intent !== "GENERAL_QUESTION" && aiData.intent !== "CASUAL_CHAT") {
+          await executeIntent(intent);
         }
 
-        // Add assistant message to chat
-        addMessage("assistant", response.text, response.intent.action);
+        addMessage("assistant", aiData.message, aiData.intent);
 
-        // Speak the response
         setIsSpeaking(true);
-        await speakText(response.text);
+        await speakText(aiData.message);
         setIsSpeaking(false);
 
-        // Log interaction for research
         const executionTime = Date.now() - startTimeRef.current;
         await logVoiceInteraction({
           userId: user?.id || "unknown",
           transcript: transcribedText,
-          intent: response.intent.action,
-          confidence: response.confidence,
+          intent: aiData.intent,
+          confidence: 0.9,
           executionTime,
           success: true,
           context: {
@@ -109,7 +92,6 @@ export const useAIAssistant = () => {
           },
         });
 
-        // Clear transcript
         clearTranscript();
         setIsProcessing(false);
         processingRef.current = false;
@@ -120,7 +102,6 @@ export const useAIAssistant = () => {
         setIsSpeaking(false);
         processingRef.current = false;
 
-        // Log error
         await logVoiceInteraction({
           userId: user?.id || "unknown",
           transcript: transcribedText || "",
@@ -137,20 +118,9 @@ export const useAIAssistant = () => {
         });
       }
     },
-    [
-      medications,
-      user,
-      addMessage,
-      getUserPreferences,
-      logVoiceInteraction,
-      speakText,
-      clearTranscript,
-    ]
+    [medications, user, addMessage, logVoiceInteraction, speakText, clearTranscript]
   );
 
-  /**
-   * Start listening for voice input
-   */
   const startListening = useCallback(async () => {
     try {
       setError(null);
@@ -163,9 +133,6 @@ export const useAIAssistant = () => {
     }
   }, [startVoiceRecognition]);
 
-  /**
-   * Stop listening manually
-   */
   const stopListening = useCallback(async () => {
     try {
       await stopVoiceRecognition();
@@ -174,9 +141,6 @@ export const useAIAssistant = () => {
     }
   }, [stopVoiceRecognition]);
 
-  /**
-   * Execute intent based on AI response
-   */
   const executeIntent = useCallback(
     async (intent: Intent) => {
       const taskStartTime = Date.now();
@@ -200,23 +164,7 @@ export const useAIAssistant = () => {
             success = true;
             break;
 
-          case UserIntent.QUERY_SCHEDULE:
-            // Handled by AI response text
-            success = true;
-            break;
-
-          case UserIntent.QUERY_INTERACTIONS:
-            await handleCheckInteractions(intent);
-            success = true;
-            break;
-
-          case UserIntent.REQUEST_HELP:
-            await handleRequestHelp(intent);
-            success = true;
-            break;
-
           default:
-            console.log("No specific action for intent:", intent.action);
             success = true;
             break;
         }
@@ -226,7 +174,6 @@ export const useAIAssistant = () => {
         success = false;
       }
 
-      // Log task completion
       await logTaskCompletion({
         userId: user?.id || "unknown",
         task: intent.action,
@@ -239,9 +186,6 @@ export const useAIAssistant = () => {
     [user, logTaskCompletion]
   );
 
-  /**
-   * Handle adding medication via voice
-   */
   const handleAddMedication = useCallback(
     async (intent: Intent) => {
       const { medicationName, dosage, unit, times, purpose, instructions } = intent.entities;
@@ -255,14 +199,10 @@ export const useAIAssistant = () => {
         startDate: new Date(),
         schedule: times?.map((time: string) => ({ time })),
       });
-      console.log("Medication added via voice:", medicationName);
     },
     [addMedication]
   );
 
-  /**
-   * Handle marking medication as taken
-   */
   const handleMarkTaken = useCallback(
     async (intent: Intent) => {
       const { medicationName } = intent.entities;
@@ -271,97 +211,48 @@ export const useAIAssistant = () => {
         (m) => m.name.toLowerCase() === medicationName?.toLowerCase()
       );
 
-      if (!medication) {
-        console.error("Medication not found:", medicationName);
-        return;
-      }
+      if (!medication) return;
 
       const pendingSchedule = medication.schedule.find((s) => !s.taken && !s.skipped);
 
       if (pendingSchedule) {
         await doseRecordApi.record(pendingSchedule.id, { status: "taken" });
-        console.log("Marked as taken:", medication.name);
       }
     },
     [medications]
   );
 
-  /**
-   * Handle skipping a dose
-   */
   const handleSkipDose = useCallback(
     async (intent: Intent) => {
-      const { medicationName, reason } = intent.entities;
+      const { medicationName } = intent.entities;
 
       const medication = medications.find(
         (m) => m.name.toLowerCase() === medicationName?.toLowerCase()
       );
 
-      if (!medication) {
-        console.error("Medication not found:", medicationName);
-        return;
-      }
+      if (!medication) return;
 
       const pendingSchedule = medication.schedule.find((s) => !s.taken && !s.skipped);
 
       if (pendingSchedule) {
         await doseRecordApi.record(pendingSchedule.id, { status: "skipped" });
-        console.log("Marked as skipped:", medication.name);
       }
     },
     [medications]
   );
 
-  /**
-   * Handle checking drug interactions
-   */
-  const handleCheckInteractions = useCallback(
-    async (intent: Intent) => {
-      const { newMedication } = intent.entities;
-
-      if (newMedication) {
-        const result = await aiVoiceAssistant.checkDrugInteractions(medications, newMedication);
-        console.log("Drug interaction check:", result);
-      }
-    },
-    [medications]
-  );
-
-  /**
-   * Handle help request
-   */
-  const handleRequestHelp = useCallback(async (intent: Intent) => {
-    const { urgency, issue } = intent.entities;
-
-    console.log(`Help requested - Urgency: ${urgency}, Issue: ${issue}`);
-
-    if (urgency === "emergency") {
-      console.log("EMERGENCY: Notifying emergency contacts");
-      // TODO: Implement emergency contact notification
-    }
-  }, []);
-
-  /**
-   * Stop speaking (interrupt)
-   */
   const stopSpeaking = useCallback(async () => {
-    await aiVoiceAssistant.stopSpeaking();
+    await Speech.stop();
     setIsSpeaking(false);
   }, []);
 
-  /**
-   * Clear conversation history
-   */
-  const clearConversation = useCallback(() => {
+  const clearConversation = useCallback(async () => {
     setMessages([]);
-    aiVoiceAssistant.clearHistory();
+    await aiApi.clearConversation();
     setError(null);
     clearTranscript();
   }, [clearTranscript]);
 
-  /**
-   * Send text message (non-voice input)
-   */
   const sendTextMessage = useCallback(
     async (text: string) => {
       startTimeRef.current = Date.now();
@@ -372,7 +263,6 @@ export const useAIAssistant = () => {
   );
 
   return {
-    // State
     messages,
     isListening,
     isProcessing,
@@ -380,7 +270,6 @@ export const useAIAssistant = () => {
     transcript,
     error: error || voiceError,
 
-    // Actions
     startListening,
     stopListening,
     stopSpeaking,
