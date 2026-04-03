@@ -1,13 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Pressable,
-  Alert,
-  TextInput,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Alert, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 import { Ionicons } from "@expo/vector-icons";
@@ -41,7 +33,7 @@ export const MedicationListScreen: React.FC = () => {
     await speak(
       `You have ${count} medication${count !== 1 ? "s" : ""} in your list. ${pendingCount} dose${
         pendingCount !== 1 ? "s" : ""
-      } remaining today.`
+      } remaining today.`,
     );
   };
 
@@ -76,7 +68,7 @@ export const MedicationListScreen: React.FC = () => {
   const handleMarkTaken = async (
     _medicationId: string,
     scheduleId: string,
-    medicationName: string
+    medicationName: string,
   ) => {
     await markDoseTaken(scheduleId);
     await speak(`${medicationName} marked as taken`);
@@ -85,7 +77,7 @@ export const MedicationListScreen: React.FC = () => {
   const handleMarkSkipped = async (
     _medicationId: string,
     scheduleId: string,
-    medicationName: string
+    medicationName: string,
   ) => {
     Alert.alert("Skip Dose", `Skip ${medicationName}?`, [
       { text: "Cancel", style: "cancel" },
@@ -113,7 +105,7 @@ export const MedicationListScreen: React.FC = () => {
       filtered = filtered.filter(
         (med) =>
           med.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          med.purpose.toLowerCase().includes(searchQuery.toLowerCase())
+          med.purpose.toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 
@@ -236,13 +228,15 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: COLORS.primary + "15",
+    backgroundColor: COLORS.white,
     padding: 16,
     borderRadius: 12,
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
   },
-  statValue: { fontSize: FONTS.size.extraLarge, fontWeight: "bold", color: COLORS.primary },
-  statLabel: { fontSize: FONTS.size.medium, color: COLORS.gray.dark, marginTop: 4 },
+  statValue: { fontSize: FONTS.size.extraLarge, fontWeight: "bold", color: COLORS.primaryDark },
+  statLabel: { fontSize: FONTS.size.medium, color: COLORS.gray.medium, marginTop: 4 },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -269,10 +263,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: COLORS.gray.light,
+    backgroundColor: COLORS.gray.lightest,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
     marginRight: 8,
   },
-  sortButtonActive: { backgroundColor: COLORS.primary },
-  sortButtonText: { fontSize: FONTS.size.medium, color: COLORS.gray.dark },
+  sortButtonActive: {
+    backgroundColor: COLORS.primaryDark,
+    borderColor: COLORS.primaryDark,
+  },
+  sortButtonText: { fontSize: FONTS.size.medium, color: COLORS.gray.medium },
   sortButtonTextActive: { color: COLORS.white, fontWeight: "600" },
 });
