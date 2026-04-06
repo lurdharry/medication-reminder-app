@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   Pressable,
   Alert,
   KeyboardAvoidingView,
@@ -15,16 +14,27 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { Formik } from "formik";
 import { format } from "date-fns";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 
 import { useMedications } from "@/hooks/useMedications";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
-import { useVoice } from "../hooks/useVoice";
+import { useVoice } from "@/hooks/useVoice";
+import { FormInput } from "@/components/FormInput";
+import { Button } from "@/components/Button";
+import { medicationSchema } from "@/utils/validation/medicationValidation";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { MEDICATION_TIMES } from "@/constants";
+
+interface MedicationFormValues {
+  name: string;
+  dosage: string;
+  purpose: string;
+  instructions: string;
+}
 
 export const AddMedicationScreen: React.FC = () => {
   const navigation = useAppNavigation();
@@ -37,11 +47,7 @@ export const AddMedicationScreen: React.FC = () => {
   const isEditing = !!medicationId;
   const existingMed = isEditing ? medications.find((m) => m.id === medicationId) : null;
 
-  const [name, setName] = useState(existingMed?.name || "");
-  const [dosage, setDosage] = useState(existingMed?.dosage.toString() || "");
   const [unit, setUnit] = useState<"mg" | "ml" | "pills">(existingMed?.unit || "mg");
-  const [purpose, setPurpose] = useState(existingMed?.purpose || "");
-  const [instructions, setInstructions] = useState(existingMed?.instructions || "");
   const [selectedTimes, setSelectedTimes] = useState<string[]>(
     existingMed?.schedule.map((s) => s.time) || []
   );
@@ -51,6 +57,13 @@ export const AddMedicationScreen: React.FC = () => {
   );
   const [refillEnabled, setRefillEnabled] = useState(!!existingMed?.refillDate);
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const initialValues: MedicationFormValues = {
+    name: existingMed?.name || "",
+    dosage: existingMed?.dosage?.toString() || "",
+    purpose: existingMed?.purpose || "",
+    instructions: existingMed?.instructions || "",
+  };
 
   useEffect(() => {
     if (isEditing) {
@@ -83,15 +96,7 @@ export const AddMedicationScreen: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert("Missing Information", "Please enter medication name");
-      return;
-    }
-    if (!dosage.trim() || isNaN(Number(dosage))) {
-      Alert.alert("Invalid Dosage", "Please enter a valid dosage amount");
-      return;
-    }
+  const handleSave = async (values: MedicationFormValues) => {
     if (selectedTimes.length === 0) {
       Alert.alert("No Schedule", "Please select at least one time");
       return;
@@ -99,11 +104,11 @@ export const AddMedicationScreen: React.FC = () => {
 
     try {
       const medicationInput = {
-        name: name.trim(),
-        dosage,
+        name: values.name.trim(),
+        dosage: values.dosage,
         unit,
-        purpose: purpose.trim(),
-        instructions: instructions.trim(),
+        purpose: values.purpose.trim(),
+        instructions: values.instructions.trim(),
         imageUri,
         startDate: existingMed?.startDate || new Date(),
         refillDate: refillEnabled ? refillDate : undefined,
@@ -112,10 +117,10 @@ export const AddMedicationScreen: React.FC = () => {
 
       if (isEditing) {
         await updateMedication(medicationId, medicationInput);
-        speak(`${name} updated`);
+        speak(`${values.name} updated`);
       } else {
         await addMedication(medicationInput);
-        speak(`${name} added`);
+        speak(`${values.name} added`);
       }
 
       navigation.goBack();
@@ -125,193 +130,204 @@ export const AddMedicationScreen: React.FC = () => {
   };
 
   const handleCancel = () => {
-    if (name || dosage || selectedTimes.length > 0) {
-      Alert.alert("Discard Changes?", "You have unsaved changes.", [
-        { text: "Keep Editing", style: "cancel" },
-        { text: "Discard", style: "destructive", onPress: () => navigation.goBack() },
-      ]);
-    } else {
-      navigation.goBack();
-    }
+    navigation.goBack();
   };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
+      <Formik
+        initialValues={initialValues}
+        validationSchema={medicationSchema}
+        onSubmit={handleSave}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Pressable style={styles.headerBtn} onPress={handleCancel}>
-            <Ionicons name="close" size={24} color={COLORS.gray.dark} />
-          </Pressable>
-          <Text style={styles.headerTitle}>
-            {isEditing ? "Edit Medication" : "Add Medication"}
-          </Text>
-          <Pressable style={styles.headerBtn} onPress={handleSave}>
-            <Text style={styles.saveText}>Save</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Image */}
-          <Pressable style={styles.imagePicker} onPress={handlePickImage}>
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} style={styles.medicationImage} />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="camera" size={28} color={COLORS.gray.medium} />
-                <Text style={styles.imageText}>Add Photo</Text>
-              </View>
-            )}
-          </Pressable>
-
-          {/* Basic Info */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Basic Information</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Medication Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g., Metformin"
-                placeholderTextColor={COLORS.gray.light}
-              />
+        {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.keyboardView}
+          >
+            {/* Header */}
+            <View style={styles.header}>
+              <Pressable style={styles.headerBtn} onPress={handleCancel}>
+                <Ionicons name="close" size={24} color={COLORS.gray.dark} />
+              </Pressable>
+              <Text style={styles.headerTitle}>
+                {isEditing ? "Edit Medication" : "Add Medication"}
+              </Text>
+              <Pressable style={styles.headerBtn} onPress={() => handleSubmit()}>
+                <Text style={styles.saveText}>Save</Text>
+              </Pressable>
             </View>
 
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, { flex: 1.5, marginRight: 12 }]}>
-                <Text style={styles.label}>Dosage *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={dosage}
-                  onChangeText={setDosage}
-                  placeholder="500"
-                  placeholderTextColor={COLORS.gray.light}
-                  keyboardType="numeric"
+            <ScrollView
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {/* Image */}
+              <Pressable style={styles.imagePicker} onPress={handlePickImage}>
+                {imageUri ? (
+                  <Image source={{ uri: imageUri }} style={styles.medicationImage} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                    <Ionicons name="camera" size={28} color={COLORS.gray.medium} />
+                    <Text style={styles.imageText}>Add Photo</Text>
+                  </View>
+                )}
+              </Pressable>
+
+              {/* Basic Info */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Basic Information</Text>
+
+                <FormInput
+                  label="Medication Name *"
+                  leftIcon="medical-outline"
+                  value={values.name}
+                  onChangeText={handleChange("name")}
+                  onBlur={handleBlur("name")}
+                  placeholder="e.g., Metformin"
+                  autoCapitalize="words"
+                  error={errors.name}
+                  touched={touched.name}
+                />
+
+                <View style={styles.row}>
+                  <View style={{ flex: 1.5, marginRight: 12 }}>
+                    <FormInput
+                      label="Dosage *"
+                      value={values.dosage}
+                      onChangeText={handleChange("dosage")}
+                      onBlur={handleBlur("dosage")}
+                      placeholder="500"
+                      keyboardType="numeric"
+                      error={errors.dosage}
+                      touched={touched.dosage}
+                    />
+                  </View>
+
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.label}>Unit</Text>
+                    <View style={styles.unitSelector}>
+                      {(["mg", "ml", "pills"] as const).map((u) => (
+                        <Pressable
+                          key={u}
+                          style={[styles.unitBtn, unit === u && styles.unitBtnActive]}
+                          onPress={() => setUnit(u)}
+                        >
+                          <Text style={[styles.unitBtnText, unit === u && styles.unitBtnTextActive]}>
+                            {u}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+
+                <FormInput
+                  label="Purpose"
+                  leftIcon="information-circle-outline"
+                  value={values.purpose}
+                  onChangeText={handleChange("purpose")}
+                  onBlur={handleBlur("purpose")}
+                  placeholder="e.g., Diabetes management"
+                  error={errors.purpose}
+                  touched={touched.purpose}
+                />
+
+                <FormInput
+                  label="Instructions"
+                  leftIcon="document-text-outline"
+                  value={values.instructions}
+                  onChangeText={handleChange("instructions")}
+                  onBlur={handleBlur("instructions")}
+                  placeholder="e.g., Take with food"
+                  multiline
+                  numberOfLines={3}
+                  error={errors.instructions}
+                  touched={touched.instructions}
                 />
               </View>
 
-              <View style={[styles.inputGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Unit</Text>
-                <View style={styles.unitSelector}>
-                  {(["mg", "ml", "pills"] as const).map((u) => (
-                    <Pressable
-                      key={u}
-                      style={[styles.unitBtn, unit === u && styles.unitBtnActive]}
-                      onPress={() => setUnit(u)}
-                    >
-                      <Text style={[styles.unitBtnText, unit === u && styles.unitBtnTextActive]}>
-                        {u}
-                      </Text>
-                    </Pressable>
-                  ))}
+              {/* Schedule */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Schedule *</Text>
+                <Text style={styles.sectionSubtitle}>Select times to take this medication</Text>
+
+                <View style={styles.timeGrid}>
+                  {MEDICATION_TIMES.map((time) => {
+                    const isSelected = selectedTimes.includes(time);
+                    return (
+                      <Pressable
+                        key={time}
+                        style={[styles.timeBtn, isSelected && styles.timeBtnActive]}
+                        onPress={() => handleSelectTime(time)}
+                      >
+                        <Ionicons
+                          name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                          size={20}
+                          color={isSelected ? COLORS.primary : COLORS.gray.light}
+                        />
+                        <Text style={[styles.timeBtnText, isSelected && styles.timeBtnTextActive]}>
+                          {time}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
               </View>
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Purpose</Text>
-              <TextInput
-                style={styles.input}
-                value={purpose}
-                onChangeText={setPurpose}
-                placeholder="e.g., Diabetes management"
-                placeholderTextColor={COLORS.gray.light}
-              />
-            </View>
+              {/* Refill */}
+              <View style={styles.section}>
+                <View style={styles.refillHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.sectionTitle}>Refill Reminder</Text>
+                    <Text style={styles.sectionSubtitle}>Get notified when it's time to refill</Text>
+                  </View>
+                  <Switch
+                    value={refillEnabled}
+                    onValueChange={setRefillEnabled}
+                    trackColor={{ false: COLORS.gray.lighter, true: COLORS.accent }}
+                    thumbColor={COLORS.white}
+                  />
+                </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Instructions</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={instructions}
-                onChangeText={setInstructions}
-                placeholder="e.g., Take with food"
-                placeholderTextColor={COLORS.gray.light}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </View>
-
-          {/* Schedule */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Schedule *</Text>
-            <Text style={styles.sectionSubtitle}>Select times to take this medication</Text>
-
-            <View style={styles.timeGrid}>
-              {MEDICATION_TIMES.map((time) => {
-                const isSelected = selectedTimes.includes(time);
-                return (
-                  <Pressable
-                    key={time}
-                    style={[styles.timeBtn, isSelected && styles.timeBtnActive]}
-                    onPress={() => handleSelectTime(time)}
-                  >
-                    <Ionicons
-                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
-                      size={20}
-                      color={isSelected ? COLORS.primary : COLORS.gray.light}
-                    />
-                    <Text style={[styles.timeBtnText, isSelected && styles.timeBtnTextActive]}>
-                      {time}
+                {refillEnabled && (
+                  <Pressable style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+                    <Ionicons name="calendar" size={20} color={COLORS.primary} />
+                    <Text style={styles.dateBtnText}>
+                      {format(refillDate, "EEE, MMM dd, yyyy")}
                     </Text>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.gray.light} />
                   </Pressable>
-                );
-              })}
-            </View>
-          </View>
+                )}
 
-          {/* Refill */}
-          <View style={styles.section}>
-            <View style={styles.refillHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.sectionTitle}>Refill Reminder</Text>
-                <Text style={styles.sectionSubtitle}>Get notified when it's time to refill</Text>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={refillDate}
+                    mode="date"
+                    display="default"
+                    minimumDate={new Date()}
+                    onChange={(_event, selectedDate) => {
+                      setShowDatePicker(Platform.OS === "ios");
+                      if (selectedDate) setRefillDate(selectedDate);
+                    }}
+                  />
+                )}
               </View>
-              <Switch
-                value={refillEnabled}
-                onValueChange={setRefillEnabled}
-                trackColor={{ false: COLORS.gray.lighter, true: COLORS.accent }}
-                thumbColor={COLORS.white}
-              />
-            </View>
 
-            {refillEnabled && (
-              <Pressable style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
-                <Ionicons name="calendar" size={20} color={COLORS.primary} />
-                <Text style={styles.dateBtnText}>
-                  {format(refillDate, "EEE, MMM dd, yyyy")}
-                </Text>
-                <Ionicons name="chevron-forward" size={18} color={COLORS.gray.light} />
-              </Pressable>
-            )}
-
-            {showDatePicker && (
-              <DateTimePicker
-                value={refillDate}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(_event, selectedDate) => {
-                  setShowDatePicker(Platform.OS === "ios");
-                  if (selectedDate) setRefillDate(selectedDate);
-                }}
-              />
-            )}
-          </View>
-
-          <View style={{ height: 40 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+              {/* Submit */}
+              <View style={styles.submitSection}>
+                <Button
+                  title={isEditing ? "Update Medication" : "Add Medication"}
+                  rightIcon="checkmark"
+                  loading={isSubmitting}
+                  onPress={() => handleSubmit()}
+                />
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        )}
+      </Formik>
     </SafeAreaView>
   );
 };
@@ -332,7 +348,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: FONTS.size.large, fontWeight: "700", color: COLORS.primaryDark },
   saveText: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.accent, textAlign: "right" },
   scrollView: { flex: 1 },
-  scrollContent: { paddingBottom: DIMENSIONS.PADDING_LARGE },
+  scrollContent: { paddingBottom: 40 },
 
   // Image
   imagePicker: {
@@ -369,21 +385,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark, marginBottom: 4 },
   sectionSubtitle: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginBottom: 12 },
 
-  // Inputs
-  inputGroup: { marginBottom: 16 },
-  label: { fontSize: FONTS.size.small, fontWeight: "600", color: COLORS.gray.medium, marginBottom: 6 },
-  input: {
-    backgroundColor: COLORS.white,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    fontSize: FONTS.size.medium,
-    color: COLORS.primaryDark,
-    borderWidth: 1,
-    borderColor: COLORS.gray.lighter,
-  },
-  textArea: { height: 80, textAlignVertical: "top" },
+  // Row
   row: { flexDirection: "row" },
+  label: { fontSize: FONTS.size.small, fontWeight: "600", color: COLORS.gray.medium, marginBottom: 6 },
 
   // Unit
   unitSelector: { flexDirection: "row", gap: 6 },
@@ -432,4 +436,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dateBtnText: { flex: 1, fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.primaryDark },
+
+  // Submit
+  submitSection: {
+    paddingHorizontal: DIMENSIONS.PADDING,
+    marginTop: 8,
+  },
 });
