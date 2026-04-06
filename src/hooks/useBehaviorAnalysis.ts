@@ -1,290 +1,178 @@
-import { useState, useCallback, useEffect } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { doseRecordApi, DoseRecordResponse } from "@/services/api/doseRecordApi";
+import { useAuth } from "@/contexts/AuthContext";
+import { AdherenceInsights } from "@/types";
 
-import { DoseRecord, AdherenceInsights } from "../types";
-import { STORAGE_KEYS } from "@/constants/storage";
-import { Storage } from "@/services/storage";
+const findOptimalTime = (records: DoseRecordResponse[]): string => {
+  const slots: Record<string, { taken: number; total: number }> = {
+    morning: { taken: 0, total: 0 },
+    afternoon: { taken: 0, total: 0 },
+    evening: { taken: 0, total: 0 },
+    night: { taken: 0, total: 0 },
+  };
 
-/**
- * Hook for analyzing medication adherence behavior patterns
- */
-export const useBehaviorAnalysis = (userId?: string) => {
-  const [insights, setInsights] = useState<AdherenceInsights | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  records.forEach((r) => {
+    const hour = new Date(r.scheduledAt).getHours();
+    const slot = hour >= 5 && hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
+    slots[slot].total++;
+    if (r.status === "taken") slots[slot].taken++;
+  });
 
-  useEffect(() => {
-    analyzePatterns(30);
-  }, []);
-
-  /**
-   * Get dose records for a specific time period
-   */
-  const getDoseRecordsForPeriod = useCallback((days: number): DoseRecord[] => {
-    const allRecords = Storage.getObject<DoseRecord[]>(STORAGE_KEYS.DOSE_RECORDS) || [];
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
-
-    return allRecords.filter((record) => new Date(record.scheduledTime) >= cutoffDate);
-  }, []);
-
-  /**
-   * Find optimal times when user is most adherent
-   */
-  const findOptimalTimes = useCallback((records: DoseRecord[]): string => {
-    const timeSlots = {
-      morning: { taken: 0, total: 0 },
-      afternoon: { taken: 0, total: 0 },
-      evening: { taken: 0, total: 0 },
-      night: { taken: 0, total: 0 },
-    };
-
-    records.forEach((record) => {
-      const hour = new Date(record.scheduledTime).getHours();
-      let slot: keyof typeof timeSlots;
-
-      if (hour >= 5 && hour < 12) slot = "morning";
-      else if (hour >= 12 && hour < 17) slot = "afternoon";
-      else if (hour >= 17 && hour < 21) slot = "evening";
-      else slot = "night";
-
-      timeSlots[slot].total++;
-      if (record.status === "taken") {
-        timeSlots[slot].taken++;
-      }
-    });
-
-    let bestSlot = "morning";
-    let bestRate = 0;
-
-    Object.entries(timeSlots).forEach(([slot, data]) => {
-      if (data.total > 0) {
-        const rate = data.taken / data.total;
-        if (rate > bestRate) {
-          bestRate = rate;
-          bestSlot = slot;
-        }
-      }
-    });
-
-    return bestSlot;
-  }, []);
-
-  /**
-   * Find problematic times when user often misses doses
-   */
-  const findProblematicTimes = useCallback((records: DoseRecord[]): string => {
-    const timeSlots = {
-      morning: { missed: 0, total: 0 },
-      afternoon: { missed: 0, total: 0 },
-      evening: { missed: 0, total: 0 },
-      night: { missed: 0, total: 0 },
-    };
-
-    records.forEach((record) => {
-      const hour = new Date(record.scheduledTime).getHours();
-      let slot: keyof typeof timeSlots;
-
-      if (hour >= 5 && hour < 12) slot = "morning";
-      else if (hour >= 12 && hour < 17) slot = "afternoon";
-      else if (hour >= 17 && hour < 21) slot = "evening";
-      else slot = "night";
-
-      timeSlots[slot].total++;
-      if (record.status === "missed") {
-        timeSlots[slot].missed++;
-      }
-    });
-
-    let worstSlot = "morning";
-    let worstRate = 0;
-
-    Object.entries(timeSlots).forEach(([slot, data]) => {
-      if (data.total > 0) {
-        const rate = data.missed / data.total;
-        if (rate > worstRate) {
-          worstRate = rate;
-          worstSlot = slot;
-        }
-      }
-    });
-
-    return worstSlot;
-  }, []);
-
-  /**
-   * Analyze which day of week has best adherence
-   */
-  const analyzeDayPatterns = useCallback((records: DoseRecord[]): string => {
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const dayStats: Record<string, { taken: number; total: number }> = {};
-
-    days.forEach((day) => {
-      dayStats[day] = { taken: 0, total: 0 };
-    });
-
-    records.forEach((record) => {
-      const dayName = days[new Date(record.scheduledTime).getDay()];
-      dayStats[dayName].total++;
-      if (record.status === "taken") {
-        dayStats[dayName].taken++;
-      }
-    });
-
-    let bestDay = "Monday";
-    let bestRate = 0;
-
-    Object.entries(dayStats).forEach(([day, stats]) => {
-      if (stats.total > 0) {
-        const rate = stats.taken / stats.total;
-        if (rate > bestRate) {
-          bestRate = rate;
-          bestDay = day;
-        }
-      }
-    });
-
-    return bestDay;
-  }, []);
-
-  /**
-   * Generate personalized suggestions
-   */
-  const generateSuggestions = useCallback((records: DoseRecord[]): string[] => {
-    const suggestions: string[] = [];
-
-    const morningMisses = records.filter((r) => {
-      const hour = new Date(r.scheduledTime).getHours();
-      return hour >= 5 && hour < 12 && r.status === "missed";
-    }).length;
-
-    if (morningMisses > 5) {
-      suggestions.push("Try placing your morning medications next to your breakfast items");
+  let best = "morning";
+  let bestRate = 0;
+  Object.entries(slots).forEach(([slot, data]) => {
+    if (data.total > 0 && data.taken / data.total > bestRate) {
+      bestRate = data.taken / data.total;
+      best = slot;
     }
+  });
+  return best;
+};
 
-    const eveningMisses = records.filter((r) => {
-      const hour = new Date(r.scheduledTime).getHours();
-      return hour >= 17 && hour < 21 && r.status === "missed";
-    }).length;
+const findWorstTime = (records: DoseRecordResponse[]): string => {
+  const slots: Record<string, { missed: number; total: number }> = {
+    morning: { missed: 0, total: 0 },
+    afternoon: { missed: 0, total: 0 },
+    evening: { missed: 0, total: 0 },
+    night: { missed: 0, total: 0 },
+  };
 
-    if (eveningMisses > 5) {
-      suggestions.push("Consider setting an alarm for evening medications during dinner");
+  records.forEach((r) => {
+    const hour = new Date(r.scheduledAt).getHours();
+    const slot = hour >= 5 && hour < 12 ? "morning" : hour < 17 ? "afternoon" : hour < 21 ? "evening" : "night";
+    slots[slot].total++;
+    if (r.status === "missed") slots[slot].missed++;
+  });
+
+  let worst = "evening";
+  let worstRate = 0;
+  Object.entries(slots).forEach(([slot, data]) => {
+    if (data.total > 0 && data.missed / data.total > worstRate) {
+      worstRate = data.missed / data.total;
+      worst = slot;
     }
+  });
+  return worst;
+};
 
-    const weekendMisses = records.filter((r) => {
-      const day = new Date(r.scheduledTime).getDay();
-      return (day === 0 || day === 6) && r.status === "missed";
-    }).length;
+const findBestDay = (records: DoseRecordResponse[]): string => {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const stats: Record<string, { taken: number; total: number }> = {};
+  days.forEach((d) => (stats[d] = { taken: 0, total: 0 }));
 
-    if (weekendMisses > records.length * 0.3) {
-      suggestions.push("You tend to miss more doses on weekends. Try weekend-specific reminders");
+  records.forEach((r) => {
+    const day = days[new Date(r.scheduledAt).getDay()];
+    stats[day].total++;
+    if (r.status === "taken") stats[day].taken++;
+  });
+
+  let best = "Monday";
+  let bestRate = 0;
+  Object.entries(stats).forEach(([day, data]) => {
+    if (data.total > 0 && data.taken / data.total > bestRate) {
+      bestRate = data.taken / data.total;
+      best = day;
     }
+  });
+  return best;
+};
 
-    const adherenceRate = records.filter((r) => r.status === "taken").length / records.length;
-    if (adherenceRate > 0.9) {
-      suggestions.push("Excellent work! Keep up your consistent routine");
-    }
+const calculateTrend = (records: DoseRecordResponse[]): "improving" | "declining" | "stable" => {
+  if (records.length < 14) return "stable";
+  const mid = Math.floor(records.length / 2);
+  const firstRate = records.slice(0, mid).filter((r) => r.status === "taken").length / mid;
+  const secondRate = records.slice(mid).filter((r) => r.status === "taken").length / (records.length - mid);
+  const diff = secondRate - firstRate;
+  if (diff > 0.1) return "improving";
+  if (diff < -0.1) return "declining";
+  return "stable";
+};
 
-    return suggestions.length > 0 ? suggestions : ["Continue with your current routine!"];
-  }, []);
+const generateSuggestions = (records: DoseRecordResponse[]): string[] => {
+  if (records.length === 0) return ["Start taking your medications to build good habits"];
 
-  /**
-   * Calculate adherence trend
-   */
-  const calculateTrend = useCallback(
-    (records: DoseRecord[]): "improving" | "declining" | "stable" => {
-      if (records.length < 14) return "stable";
+  const suggestions: string[] = [];
+  const total = records.length;
+  const adherenceRate = records.filter((r) => r.status === "taken").length / total;
 
-      const midPoint = Math.floor(records.length / 2);
-      const firstHalf = records.slice(0, midPoint);
-      const secondHalf = records.slice(midPoint);
+  const morningMisses = records.filter((r) => {
+    const hour = new Date(r.scheduledAt).getHours();
+    return hour >= 5 && hour < 12 && r.status === "missed";
+  }).length;
 
-      const firstRate = firstHalf.filter((r) => r.status === "taken").length / firstHalf.length;
-      const secondRate = secondHalf.filter((r) => r.status === "taken").length / secondHalf.length;
+  if (morningMisses > 5) {
+    suggestions.push("Try placing your morning medications next to your breakfast items");
+  }
 
-      const difference = secondRate - firstRate;
+  const eveningMisses = records.filter((r) => {
+    const hour = new Date(r.scheduledAt).getHours();
+    return hour >= 17 && hour < 21 && r.status === "missed";
+  }).length;
 
-      if (difference > 0.1) return "improving";
-      if (difference < -0.1) return "declining";
-      return "stable";
+  if (eveningMisses > 5) {
+    suggestions.push("Consider setting an alarm for evening medications during dinner");
+  }
+
+  if (adherenceRate > 0.9) {
+    suggestions.push("Excellent work! Keep up your consistent routine");
+  }
+
+  return suggestions.length > 0 ? suggestions : ["Continue with your current routine!"];
+};
+
+export const useBehaviorAnalysis = (timeframe: number = 30) => {
+  const { isAuthenticated } = useAuth();
+
+  const query = useQuery({
+    queryKey: ["doseRecords", "analysis"],
+    queryFn: async (): Promise<DoseRecordResponse[]> => {
+      const response = await doseRecordApi.getHistory();
+      return response.data.data;
     },
-    []
-  );
+    enabled: isAuthenticated,
+  });
 
-  /**
-   * Calculate improvement score
-   */
-  const calculateImprovement = useCallback((records: DoseRecord[]): number => {
-    if (records.length < 14) return 0;
+  const filteredRecords = useMemo(() => {
+    if (!query.data) return [];
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - timeframe);
+    return query.data.filter((r) => new Date(r.scheduledAt) >= cutoff);
+  }, [query.data, timeframe]);
 
-    const weekAgoIndex = Math.max(0, records.length - 7);
-    const recentWeek = records.slice(weekAgoIndex);
-    const previousWeek = records.slice(Math.max(0, weekAgoIndex - 7), weekAgoIndex);
+  const insights = useMemo((): AdherenceInsights | null => {
+    if (filteredRecords.length === 0) {
+      return {
+        bestTimeOfDay: "morning",
+        worstTimeOfDay: "evening",
+        bestDayOfWeek: "Monday",
+        commonMissReasons: [],
+        impactOfEvents: [],
+        suggestions: ["Start taking your medications to build good habits"],
+        adherenceTrend: "stable",
+        improvementScore: 0,
+      };
+    }
 
-    if (previousWeek.length === 0) return 0;
+    return {
+      bestTimeOfDay: findOptimalTime(filteredRecords),
+      worstTimeOfDay: findWorstTime(filteredRecords),
+      bestDayOfWeek: findBestDay(filteredRecords),
+      commonMissReasons: [],
+      impactOfEvents: [],
+      suggestions: generateSuggestions(filteredRecords),
+      adherenceTrend: calculateTrend(filteredRecords),
+      improvementScore: 0,
+    };
+  }, [filteredRecords]);
 
-    const recentRate = recentWeek.filter((r) => r.status === "taken").length / recentWeek.length;
-    const previousRate =
-      previousWeek.filter((r) => r.status === "taken").length / previousWeek.length;
-
-    return Math.round((recentRate - previousRate) * 100);
-  }, []);
-
-  /**
-   * Main analysis function
-   */
-  const analyzePatterns = useCallback(
-    async (timeframe: number = 30) => {
-      setError(null);
-
-      try {
-        const records = getDoseRecordsForPeriod(timeframe);
-
-        if (records.length === 0) {
-          setInsights({
-            bestTimeOfDay: "morning",
-            worstTimeOfDay: "evening",
-            bestDayOfWeek: "Monday",
-            commonMissReasons: [],
-            impactOfEvents: [],
-            suggestions: ["Start taking your medications to build good habits"],
-            adherenceTrend: "stable",
-            improvementScore: 0,
-          });
-
-          return;
-        }
-
-        const analysisResult: AdherenceInsights = {
-          bestTimeOfDay: findOptimalTimes(records),
-          worstTimeOfDay: findProblematicTimes(records),
-          bestDayOfWeek: analyzeDayPatterns(records),
-          commonMissReasons: [],
-          impactOfEvents: [],
-          suggestions: generateSuggestions(records),
-          adherenceTrend: calculateTrend(records),
-          improvementScore: calculateImprovement(records),
-        };
-
-        setInsights(analysisResult);
-      } catch (err) {
-        setError("Failed to analyze behavior patterns");
-        console.error("Behavior analysis error:", err);
-      }
-    },
-    [
-      getDoseRecordsForPeriod,
-      findOptimalTimes,
-      findProblematicTimes,
-      analyzeDayPatterns,
-      generateSuggestions,
-      calculateTrend,
-      calculateImprovement,
-    ]
-  );
+  const analyzePatterns = async (_timeframe: number) => {
+    await query.refetch();
+  };
 
   return {
     insights,
-
-    error,
+    error: query.error?.message || null,
     analyzePatterns,
   };
 };
