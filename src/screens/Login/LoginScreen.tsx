@@ -26,8 +26,8 @@ interface LoginFormValues {
 }
 
 const initialValues: LoginFormValues = {
-  email: "",
-  password: "",
+  email: "john@mediremind.com",
+  password: "secure123",
 };
 
 export const LoginScreen: React.FC = () => {
@@ -56,7 +56,12 @@ export const LoginScreen: React.FC = () => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <Formik initialValues={initialValues} validationSchema={loginSchema} onSubmit={handleLogin}>
+        <Formik
+          initialValues={initialValues}
+          validationSchema={loginSchema}
+          onSubmit={handleLogin}
+          enableReinitialize
+        >
           {({ handleChange, handleBlur, handleSubmit, values, errors, touched, isSubmitting }) => (
             <View style={styles.content}>
               <View style={styles.header}>

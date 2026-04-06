@@ -1,7 +1,7 @@
 import React from "react";
 
 import { MainTabs } from "./MainTabs";
-import { AddMedicationScreen } from "@/screens/AddMedicationScreen";
+import { AddMedicationScreen } from "@/screens/AddMedication/AddMedicationScreen";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 const Stack = createNativeStackNavigator();

@@ -26,7 +26,8 @@
           "microphonePermission": "Allow Voice Med Reminder to access your microphone for voice commands.",
           "speechRecognitionPermission": "Allow Voice Med Reminder to use speech recognition to understand your voice commands."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "ios": {
       "supportsTablet": true,
@@ -34,7 +35,11 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app needs access to your microphone for voice commands to help you manage your medications.",
         "NSSpeechRecognitionUsageDescription": "This app needs speech recognition to understand your voice commands.",
-        "UIBackgroundModes": ["audio", "fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "audio",
+          "fetch",
+          "remote-notification"
+        ]
       }
     },
     "android": {

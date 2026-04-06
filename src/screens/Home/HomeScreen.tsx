@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import useBehaviorAnalysis from "@/hooks/useBehaviorAnalysis";
-import { useHomeScreen } from "@/services/useHomeScreen";
+import { useHome } from "./useHome";
 import { HomeHeader } from "@/components/HomeHeader";
 import { useAppNavigation } from "@/hooks/useAppNavigation";
 
@@ -26,7 +26,7 @@ export const HomeScreen: React.FC = () => {
     handleMarkSkipped,
     handleMarkTaken,
     upcomingDoses,
-  } = useHomeScreen();
+  } = useHome();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

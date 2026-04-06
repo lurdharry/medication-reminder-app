@@ -23,7 +23,7 @@ interface QuickStatItem {
   color: string;
 }
 
-export const useHomeScreen = () => {
+export const useHome = () => {
   const navigation = useAppNavigation();
   const { medications, refetch, markDoseTaken, markDoseSkipped } = useMedications();
   const { getOverallStats } = useAdherence();

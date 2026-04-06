@@ -3,11 +3,11 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 
 import { COLORS } from "@/constants/colors";
-import { HomeScreen } from "@/screens/HomeScreen";
-import { MedicationListScreen } from "@/screens/MedicationListScreen";
-import { SettingsScreen } from "@/screens/SettingsScreen";
-import { AdherenceAnalyticsScreen } from "@/screens/AdherenceAnalyticsScreen";
-import { AIVoiceAssistantScreen } from "@/screens/AIVoiceAssistantScreen";
+import { HomeScreen } from "@/screens/Home/HomeScreen";
+import { MedicationListScreen } from "@/screens/MedicationList/MedicationListScreen";
+import { SettingsScreen } from "@/screens/Settings/SettingsScreen";
+import { AdherenceAnalyticsScreen } from "@/screens/Analytics/AdherenceAnalyticsScreen";
+import { AIVoiceAssistantScreen } from "@/screens/AIAssistant/AIVoiceAssistantScreen";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const Tab = createBottomTabNavigator();
