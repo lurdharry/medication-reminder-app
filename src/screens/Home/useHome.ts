@@ -34,38 +34,26 @@ export const useHome = () => {
 
   const overallStats = getOverallStats();
 
-  const pendingDoses = useMemo(() => {
-    const now = new Date();
-    const currentTime = format(now, "HH:mm");
-
+  const { pendingDoses, upcomingDoses } = useMemo(() => {
+    const currentTime = format(new Date(), "HH:mm");
     const pending: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
-
-    medications.forEach((med) => {
-      med.schedule.forEach((schedule) => {
-        if (!schedule.taken && !schedule.skipped && schedule.time <= currentTime) {
-          pending.push({ medication: med, schedule });
-        }
-      });
-    });
-
-    return pending;
-  }, [medications]);
-
-  const upcomingDoses = useMemo(() => {
-    const now = new Date();
-    const currentTime = format(now, "HH:mm");
-
     const upcoming: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
 
     medications.forEach((med) => {
       med.schedule.forEach((schedule) => {
-        if (!schedule.taken && !schedule.skipped && schedule.time > currentTime) {
-          upcoming.push({ medication: med, schedule });
+        if (schedule.taken || schedule.skipped) return;
+        const entry = { medication: med, schedule };
+        if (schedule.time <= currentTime) {
+          pending.push(entry);
+        } else {
+          upcoming.push(entry);
         }
       });
     });
 
-    return upcoming.sort((a, b) => a.schedule.time.localeCompare(b.schedule.time)).slice(0, 3);
+    upcoming.sort((a, b) => a.schedule.time.localeCompare(b.schedule.time));
+
+    return { pendingDoses: pending, upcomingDoses: upcoming.slice(0, 3) };
   }, [medications]);
 
   const handleRefresh = async () => {
