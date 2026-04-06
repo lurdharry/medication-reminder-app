@@ -1,138 +1,171 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
+  FlatList,
+  Pressable,
+  Animated,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
-
-import { useMedicationContext } from "../contexts/MedicationContext";
-
-import { generateId } from "../utils/helpers";
 import { COLORS } from "@/constants/colors";
-import { DIMENSIONS, FONTS } from "@/constants/theme";
-import { User } from "@/types";
+import { FONTS } from "@/constants/theme";
+
+type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
+
+interface OnboardingSlide {
+  id: string;
+  icon: IoniconsName;
+  iconBg: string;
+  title: string;
+  description: string;
+}
+
+const slides: OnboardingSlide[] = [
+  {
+    id: "1",
+    icon: "medical",
+    iconBg: COLORS.tint.pink,
+    title: "Track Your Medications",
+    description:
+      "Never miss a dose again. Add your medications, set schedules, and get timely reminders.",
+  },
+  {
+    id: "2",
+    icon: "mic",
+    iconBg: COLORS.tint.purple,
+    title: "AI Voice Assistant",
+    description:
+      "Manage your medications hands-free. Just speak and let our AI assistant help you.",
+  },
+  {
+    id: "3",
+    icon: "people",
+    iconBg: COLORS.tint.blue,
+    title: "Keep Loved Ones Informed",
+    description:
+      "Add emergency contacts who get notified if you miss your medications. Stay safe together.",
+  },
+];
 
 export const OnboardingScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const { addUser } = useMedicationContext();
+  const navigation = useNavigation<any>();
+  const { width } = useWindowDimensions();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
-  const [name, setName] = useState("");
-  const [age, setAge] = useState("");
-  const [emergencyName, setEmergencyName] = useState("");
-  const [emergencyPhone, setEmergencyPhone] = useState("");
-
-  const handleComplete = async () => {
-    if (!name.trim() || !age.trim()) {
-      alert("Please enter your name and age");
-      return;
+  const handleNext = () => {
+    if (currentIndex < slides.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+    } else {
+      navigation.navigate("Login");
     }
-
-    const userData: User = {
-      id: generateId(),
-      name: name.trim(),
-      age: parseInt(age),
-      emergencyContacts: emergencyName.trim()
-        ? [
-            {
-              id: generateId(),
-              name: emergencyName.trim(),
-              phone: emergencyPhone.trim(),
-              relationship: "Emergency Contact",
-              isPrimary: true,
-              notifyOnMissedDose: true,
-            },
-          ]
-        : [],
-      dateOfBirth: new Date(),
-      healthConditions: [],
-      allergies: [],
-    };
-
-    addUser(userData);
-    navigation.replace("MainTabs");
   };
 
+  const handleSkip = () => {
+    navigation.navigate("Login");
+  };
+
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: Array<{ index: number | null }> }) => {
+      if (viewableItems[0]?.index != null) {
+        setCurrentIndex(viewableItems[0].index);
+      }
+    }
+  ).current;
+
+  const renderSlide = ({ item }: { item: OnboardingSlide }) => (
+    <View style={[styles.slide, { width }]}>
+      <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
+        <Ionicons name={item.icon} size={48} color={COLORS.primaryDark} />
+      </View>
+      <Text style={styles.slideTitle}>{item.title}</Text>
+      <Text style={styles.slideDescription}>{item.description}</Text>
+    </View>
+  );
+
+  const isLastSlide = currentIndex === slides.length - 1;
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.header}>
-            <Ionicons name="medical" size={64} color={COLORS.primary} />
-            <Text style={styles.title}>Welcome to MediRemind</Text>
-            <Text style={styles.subtitle}>Let's set up your profile</Text>
-          </View>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <View style={styles.topBar}>
+        <View />
+        {!isLastSlide && (
+          <Pressable onPress={handleSkip}>
+            <Text style={styles.skipText}>Skip</Text>
+          </Pressable>
+        )}
+      </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Your Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your full name"
-                placeholderTextColor={COLORS.gray.medium}
-                autoCapitalize="words"
+      <FlatList
+        ref={flatListRef}
+        data={slides}
+        renderItem={renderSlide}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false }
+        )}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ viewAreaCoveragePercentThreshold: 50 }}
+      />
+
+      <View style={styles.bottomSection}>
+        <View style={styles.pagination}>
+          {slides.map((_, index) => {
+            const inputRange = [
+              (index - 1) * width,
+              index * width,
+              (index + 1) * width,
+            ];
+
+            const dotWidth = scrollX.interpolate({
+              inputRange,
+              outputRange: [8, 24, 8],
+              extrapolate: "clamp",
+            });
+
+            const dotOpacity = scrollX.interpolate({
+              inputRange,
+              outputRange: [0.3, 1, 0.3],
+              extrapolate: "clamp",
+            });
+
+            return (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.dot,
+                  {
+                    width: dotWidth,
+                    opacity: dotOpacity,
+                    backgroundColor: COLORS.primaryDark,
+                  },
+                ]}
               />
-            </View>
+            );
+          })}
+        </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Your Age *</Text>
-              <TextInput
-                style={styles.input}
-                value={age}
-                onChangeText={setAge}
-                placeholder="Enter your age"
-                placeholderTextColor={COLORS.gray.medium}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            <Text style={styles.sectionTitle}>Emergency Contact (Optional)</Text>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Contact Name</Text>
-              <TextInput
-                style={styles.input}
-                value={emergencyName}
-                onChangeText={setEmergencyName}
-                placeholder="e.g., John Doe"
-                placeholderTextColor={COLORS.gray.medium}
-                autoCapitalize="words"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
-              <TextInput
-                style={styles.input}
-                value={emergencyPhone}
-                onChangeText={setEmergencyPhone}
-                placeholder="e.g., +234 800 000 0000"
-                placeholderTextColor={COLORS.gray.medium}
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.button} onPress={handleComplete}>
-            <Text style={styles.buttonText}>Get Started</Text>
-            <Ionicons name="arrow-forward" size={20} color={COLORS.white} />
-          </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        <Pressable style={styles.nextButton} onPress={handleNext}>
+          <Text style={styles.nextButtonText}>
+            {isLastSlide ? "Get Started" : "Next"}
+          </Text>
+          <Ionicons
+            name={isLastSlide ? "arrow-forward" : "chevron-forward"}
+            size={18}
+            color={COLORS.white}
+          />
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 };
@@ -142,74 +175,72 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background.primary,
   },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: DIMENSIONS.PADDING_LARGE,
-  },
-  header: {
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    marginTop: DIMENSIONS.SPACING.xl,
-    marginBottom: DIMENSIONS.SPACING.xxl,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
   },
-  title: {
-    fontSize: FONTS.size.huge,
-    fontWeight: "700",
-    color: COLORS.gray.darkest,
-    marginTop: DIMENSIONS.SPACING.lg,
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: FONTS.size.large,
+  skipText: {
+    fontSize: FONTS.size.medium,
     color: COLORS.gray.medium,
-    marginTop: DIMENSIONS.SPACING.sm,
-    textAlign: "center",
+    fontWeight: "500",
   },
-  form: {
-    marginBottom: DIMENSIONS.SPACING.xl,
+  slide: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
   },
-  inputGroup: {
-    marginBottom: DIMENSIONS.SPACING.lg,
+  iconContainer: {
+    width: 110,
+    height: 110,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 40,
   },
-  label: {
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-    color: COLORS.gray.darkest,
-    marginBottom: DIMENSIONS.SPACING.sm,
-  },
-  input: {
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    padding: DIMENSIONS.PADDING,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.darkest,
-    borderWidth: 1,
-    borderColor: COLORS.gray.light,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.gray.lighter,
-    marginVertical: DIMENSIONS.SPACING.xl,
-  },
-  sectionTitle: {
-    fontSize: FONTS.size.large,
+  slideTitle: {
+    fontSize: 26,
     fontWeight: "700",
-    color: COLORS.gray.darkest,
-    marginBottom: DIMENSIONS.SPACING.lg,
+    color: COLORS.primaryDark,
+    textAlign: "center",
+    marginBottom: 16,
   },
-  button: {
-    backgroundColor: COLORS.primary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    padding: DIMENSIONS.PADDING_LARGE,
+  slideDescription: {
+    fontSize: FONTS.size.medium,
+    color: COLORS.gray.medium,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  bottomSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 20,
+    gap: 28,
+  },
+  pagination: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+  },
+  nextButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: DIMENSIONS.SPACING.sm,
+    backgroundColor: COLORS.primaryDark,
+    paddingVertical: 14,
+    borderRadius: 14,
+    gap: 8,
   },
-  buttonText: {
+  nextButtonText: {
     color: COLORS.white,
-    fontSize: FONTS.size.large,
-    fontWeight: "700",
+    fontSize: FONTS.size.medium,
+    fontWeight: "600",
   },
 });
