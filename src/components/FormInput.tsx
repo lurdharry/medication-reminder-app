@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -31,27 +31,52 @@ export const FormInput: React.FC<FormInputProps> = ({
   rightIcon,
   onLeftIconPress,
   onRightIconPress,
+  onFocus,
+  onBlur,
   style,
   ...rest
 }) => {
+  const [isFocused, setIsFocused] = useState(false);
   const hasError = touched && !!error;
+
+  const handleFocus = (e: any) => {
+    setIsFocused(true);
+    onFocus?.(e);
+  };
+
+  const handleBlur = (e: any) => {
+    setIsFocused(false);
+    onBlur?.(e);
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={[styles.inputWrapper, hasError && styles.inputError]}>
+      <Text style={[styles.label, isFocused && styles.labelFocused]}>{label}</Text>
+      <View
+        style={[
+          styles.inputWrapper,
+          isFocused && styles.inputFocused,
+          hasError && styles.inputError,
+        ]}
+      >
         {leftIcon && (
           <Pressable
             onPress={onLeftIconPress}
             disabled={!onLeftIconPress}
             style={styles.iconButton}
           >
-            <Ionicons name={leftIcon} size={22} color={COLORS.gray.medium} />
+            <Ionicons
+              name={leftIcon}
+              size={20}
+              color={isFocused ? COLORS.primary : COLORS.gray.medium}
+            />
           </Pressable>
         )}
         <TextInput
           style={[styles.input, style]}
-          placeholderTextColor={COLORS.gray.medium}
+          placeholderTextColor={COLORS.gray.light}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           {...rest}
         />
         {rightIcon && (
@@ -60,7 +85,7 @@ export const FormInput: React.FC<FormInputProps> = ({
             disabled={!onRightIconPress}
             style={styles.iconButton}
           >
-            <Ionicons name={rightIcon} size={22} color={COLORS.gray.medium} />
+            <Ionicons name={rightIcon} size={20} color={COLORS.gray.medium} />
           </Pressable>
         )}
       </View>
@@ -74,34 +99,41 @@ const styles = StyleSheet.create({
     marginBottom: DIMENSIONS.SPACING.lg,
   },
   label: {
-    fontSize: FONTS.size.medium,
+    fontSize: FONTS.size.small,
     fontWeight: "600",
-    color: COLORS.gray.darkest,
-    marginBottom: DIMENSIONS.SPACING.sm,
+    color: COLORS.gray.medium,
+    marginBottom: 6,
+  },
+  labelFocused: {
+    color: COLORS.primary,
   },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.gray.light,
+    borderColor: COLORS.gray.lighter,
   },
-  input: {
-    flex: 1,
-    padding: DIMENSIONS.PADDING,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.darkest,
+  inputFocused: {
+    borderColor: COLORS.primary,
   },
   inputError: {
     borderColor: COLORS.error,
   },
+  input: {
+    flex: 1,
+    paddingVertical: 13,
+    paddingHorizontal: DIMENSIONS.PADDING,
+    fontSize: FONTS.size.medium,
+    color: COLORS.primaryDark,
+  },
   errorText: {
     color: COLORS.error,
     fontSize: FONTS.size.small,
-    marginTop: DIMENSIONS.SPACING.xs,
+    marginTop: 4,
   },
   iconButton: {
-    padding: DIMENSIONS.PADDING,
+    paddingHorizontal: 12,
   },
 });
