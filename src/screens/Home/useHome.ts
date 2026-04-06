@@ -7,7 +7,6 @@ import { useMedications } from "@/hooks/useMedications";
 import { useAdherence } from "@/hooks/useAdherence";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVoice } from "@/hooks/useVoice";
-import { Medication, MedicationSchedule } from "@/types";
 
 interface ActionItem {
   id: string;
@@ -36,24 +35,20 @@ export const useHome = () => {
 
   const { pendingDoses, upcomingDoses } = useMemo(() => {
     const currentTime = format(new Date(), "HH:mm");
-    const pending: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
-    const upcoming: Array<{ medication: Medication; schedule: MedicationSchedule }> = [];
 
-    medications.forEach((med) => {
-      med.schedule.forEach((schedule) => {
-        if (schedule.taken || schedule.skipped) return;
-        const entry = { medication: med, schedule };
-        if (schedule.time <= currentTime) {
-          pending.push(entry);
-        } else {
-          upcoming.push(entry);
-        }
-      });
-    });
+    const allDoses = medications.flatMap((med) =>
+      med.schedule
+        .filter((s) => !s.taken && !s.skipped)
+        .map((schedule) => ({ medication: med, schedule }))
+    );
 
-    upcoming.sort((a, b) => a.schedule.time.localeCompare(b.schedule.time));
+    const pending = allDoses.filter((d) => d.schedule.time <= currentTime);
+    const upcoming = allDoses
+      .filter((d) => d.schedule.time > currentTime)
+      .sort((a, b) => a.schedule.time.localeCompare(b.schedule.time))
+      .slice(0, 3);
 
-    return { pendingDoses: pending, upcomingDoses: upcoming.slice(0, 3) };
+    return { pendingDoses: pending, upcomingDoses: upcoming };
   }, [medications]);
 
   const handleRefresh = async () => {
