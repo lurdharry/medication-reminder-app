@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useMedications } from "@/hooks/useMedications";
@@ -12,11 +12,6 @@ import { DIMENSIONS as DIMS, FONTS } from "@/constants/theme";
 export const AdherenceAnalyticsScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState<7 | 30 | 90>(30);
-  const [aiInsights, setAIInsights] = useState<{
-    insights: string[];
-    suggestions: string[];
-    encouragement: string;
-  } | null>(null);
 
   const { medications } = useMedications();
   const { getOverallStats, getMedicationStats, refetch } = useAdherence(selectedTimeframe);
@@ -63,19 +58,19 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
             refreshing={refreshing}
             onRefresh={handleRefresh}
             colors={[COLORS.primary]}
+            tintColor={COLORS.primary}
           />
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Analytics</Text>
         </View>
 
-        {/* Timeframe Selector */}
+        {/* Timeframe */}
         <View style={styles.timeframeContainer}>
           {([7, 30, 90] as const).map((days) => (
-            <TouchableOpacity
+            <Pressable
               key={days}
               style={[
                 styles.timeframeButton,
@@ -91,165 +86,105 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
               >
                 {days === 7 ? "Week" : days === 30 ? "Month" : "3 Months"}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
 
-        {/* Overall Adherence Card */}
-        <View style={styles.overallCard}>
-          <View style={styles.overallHeader}>
-            <Text style={styles.overallTitle}>Overall Adherence</Text>
-            <View style={[styles.adherenceLabel, { backgroundColor: adherenceColor + "20" }]}>
-              <Text style={[styles.adherenceLabelText, { color: adherenceColor }]}>
+        {/* Overall */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Overall Adherence</Text>
+            <View style={[styles.badge, { backgroundColor: adherenceColor + "15" }]}>
+              <Text style={[styles.badgeText, { color: adherenceColor }]}>
                 {adherenceLabel}
               </Text>
             </View>
           </View>
 
-          <View style={styles.circularProgress}>
-            <Text style={[styles.percentageText, { color: adherenceColor }]}>{overallRate}%</Text>
-            <Text style={styles.percentageLabel}>Adherence Rate</Text>
+          <View style={styles.rateSection}>
+            <Text style={[styles.rateText, { color: adherenceColor }]}>{overallRate}%</Text>
+            <Text style={styles.rateLabel}>Adherence Rate</Text>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Ionicons name="checkmark-circle" size={24} color={COLORS.success} />
+              <View style={[styles.statIconBg, { backgroundColor: COLORS.tint.green }]}>
+                <Ionicons name="checkmark-circle" size={18} color={COLORS.success} />
+              </View>
               <Text style={styles.statValue}>{overallStats.taken}</Text>
               <Text style={styles.statLabel}>Taken</Text>
             </View>
 
             <View style={styles.statItem}>
-              <Ionicons name="close-circle" size={24} color={COLORS.error} />
+              <View style={[styles.statIconBg, { backgroundColor: COLORS.error + "12" }]}>
+                <Ionicons name="close-circle" size={18} color={COLORS.error} />
+              </View>
               <Text style={styles.statValue}>{overallStats.missed}</Text>
               <Text style={styles.statLabel}>Missed</Text>
             </View>
 
             <View style={styles.statItem}>
-              <Ionicons name="remove-circle" size={24} color={COLORS.warning} />
+              <View style={[styles.statIconBg, { backgroundColor: COLORS.tint.peach }]}>
+                <Ionicons name="remove-circle" size={18} color={COLORS.warning} />
+              </View>
               <Text style={styles.statValue}>{overallStats.skipped}</Text>
               <Text style={styles.statLabel}>Skipped</Text>
             </View>
           </View>
 
           {overallStats.streak > 0 && (
-            <View style={styles.streakContainer}>
-              <Ionicons name="flame" size={20} color={COLORS.warning} />
+            <View style={styles.streakRow}>
+              <Ionicons name="flame" size={18} color={COLORS.warning} />
               <Text style={styles.streakText}>{overallStats.streak} day streak!</Text>
             </View>
           )}
         </View>
 
-        {/* AI Insights */}
-        {aiInsights && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="bulb" size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>AI Insights</Text>
-            </View>
-
-            <View style={styles.insightsCard}>
-              <Text style={styles.insightsSubtitle}>Key Observations</Text>
-              {aiInsights?.insights?.map((insight, index) => (
-                <View key={index} style={styles.insightRow}>
-                  <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
-                  <Text style={styles.insightText}>{insight}</Text>
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.insightsCard}>
-              <Text style={styles.insightsSubtitle}>Personalized Suggestions</Text>
-              {aiInsights?.suggestions?.map((suggestion, index) => (
-                <View key={index} style={styles.suggestionRow}>
-                  <Ionicons name="checkmark-circle-outline" size={16} color={COLORS.success} />
-                  <Text style={styles.suggestionText}>{suggestion}</Text>
-                </View>
-              ))}
-            </View>
-
-            {aiInsights?.encouragement && (
-              <View style={styles.encouragementCard}>
-                <Ionicons name="heart" size={20} color={COLORS.error} />
-                <Text style={styles.encouragementText}>{aiInsights.encouragement}</Text>
-              </View>
-            )}
-          </>
-        )}
-
-        {/* Pattern Analysis */}
+        {/* Patterns */}
         {patterns && (
-          <>
-            <View style={styles.sectionHeader}>
-              <Ionicons name="analytics" size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>Patterns</Text>
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.purple }]}>
+                <Ionicons name="analytics" size={16} color={COLORS.primaryDark} />
+              </View>
+              <Text style={styles.cardTitle}>Patterns</Text>
             </View>
 
-            <View style={styles.patternCard}>
-              <View style={styles.patternRow}>
-                <View style={styles.patternItem}>
-                  <Ionicons name="sunny" size={24} color={COLORS.warning} />
-                  <Text style={styles.patternLabel}>Best Time</Text>
-                  <Text style={styles.patternValue}>
-                    {patterns.bestTimeOfDay.charAt(0).toUpperCase() +
-                      patterns.bestTimeOfDay.slice(1)}
-                  </Text>
-                </View>
-
-                <View style={styles.patternDivider} />
-
-                <View style={styles.patternItem}>
-                  <Ionicons name="moon" size={24} color={COLORS.info} />
-                  <Text style={styles.patternLabel}>Challenging Time</Text>
-                  <Text style={styles.patternValue}>
-                    {patterns.worstTimeOfDay.charAt(0).toUpperCase() +
-                      patterns.worstTimeOfDay.slice(1)}
-                  </Text>
-                </View>
+            <View style={styles.patternGrid}>
+              <View style={styles.patternItem}>
+                <Text style={styles.patternLabel}>Best Time</Text>
+                <Text style={styles.patternValue}>
+                  {patterns.bestTimeOfDay.charAt(0).toUpperCase() + patterns.bestTimeOfDay.slice(1)}
+                </Text>
               </View>
-
-              <View style={styles.patternDividerHorizontal} />
-
-              <View style={styles.patternRow}>
-                <View style={styles.patternItem}>
-                  <Ionicons name="calendar" size={24} color={COLORS.primary} />
-                  <Text style={styles.patternLabel}>Best Day</Text>
-                  <Text style={styles.patternValue}>{patterns.bestDayOfWeek}</Text>
-                </View>
-
-                <View style={styles.patternDivider} />
-
-                <View style={styles.patternItem}>
-                  <Ionicons
-                    name={
-                      patterns.adherenceTrend === "improving"
-                        ? "trending-up"
-                        : patterns.adherenceTrend === "declining"
-                        ? "trending-down"
-                        : "remove"
-                    }
-                    size={24}
-                    color={
-                      patterns.adherenceTrend === "improving"
-                        ? COLORS.success
-                        : patterns.adherenceTrend === "declining"
-                        ? COLORS.error
-                        : COLORS.gray.medium
-                    }
-                  />
-                  <Text style={styles.patternLabel}>Trend</Text>
-                  <Text style={styles.patternValue}>
-                    {patterns.adherenceTrend.charAt(0).toUpperCase() +
-                      patterns.adherenceTrend.slice(1)}
-                  </Text>
-                </View>
+              <View style={styles.patternItem}>
+                <Text style={styles.patternLabel}>Challenging</Text>
+                <Text style={styles.patternValue}>
+                  {patterns.worstTimeOfDay.charAt(0).toUpperCase() + patterns.worstTimeOfDay.slice(1)}
+                </Text>
+              </View>
+              <View style={styles.patternItem}>
+                <Text style={styles.patternLabel}>Best Day</Text>
+                <Text style={styles.patternValue}>{patterns.bestDayOfWeek}</Text>
+              </View>
+              <View style={styles.patternItem}>
+                <Text style={styles.patternLabel}>Trend</Text>
+                <Text style={[
+                  styles.patternValue,
+                  { color: patterns.adherenceTrend === "improving" ? COLORS.success : patterns.adherenceTrend === "declining" ? COLORS.error : COLORS.gray.dark },
+                ]}>
+                  {patterns.adherenceTrend.charAt(0).toUpperCase() + patterns.adherenceTrend.slice(1)}
+                </Text>
               </View>
             </View>
-          </>
+          </View>
         )}
 
         {/* By Medication */}
-        <View style={styles.sectionHeader}>
-          <Ionicons name="medical" size={20} color={COLORS.primary} />
+        <View style={styles.sectionRow}>
+          <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.pink }]}>
+            <Ionicons name="medical" size={16} color={COLORS.primaryDark} />
+          </View>
           <Text style={styles.sectionTitle}>By Medication</Text>
         </View>
 
@@ -259,17 +194,14 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
           const medColor = getAdherenceColor(medRate);
 
           return (
-            <View key={medication.id} style={styles.medicationCard}>
-              <View style={styles.medicationHeader}>
-                <View style={styles.medicationInfo}>
-                  <Text style={styles.medicationName}>{medication.name}</Text>
-                  <Text style={styles.medicationDosage}>
-                    {medication.dosage}
-                    {medication.unit}
-                  </Text>
+            <View key={medication.id} style={styles.medCard}>
+              <View style={styles.medHeader}>
+                <View style={styles.medInfo}>
+                  <Text style={styles.medName}>{medication.name}</Text>
+                  <Text style={styles.medDosage}>{medication.dosage}{medication.unit}</Text>
                 </View>
-                <View style={[styles.medicationRate, { backgroundColor: medColor + "20" }]}>
-                  <Text style={[styles.medicationRateText, { color: medColor }]}>{medRate}%</Text>
+                <View style={[styles.badge, { backgroundColor: medColor + "15" }]}>
+                  <Text style={[styles.badgeText, { color: medColor }]}>{medRate}%</Text>
                 </View>
               </View>
 
@@ -279,15 +211,15 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
                 />
               </View>
 
-              <View style={styles.medicationStats}>
+              <View style={styles.medStatsRow}>
                 {[
                   { stat: medStats?.taken || 0, label: "Taken" },
                   { stat: medStats?.missed || 0, label: "Missed" },
                   { stat: medStats?.skipped || 0, label: "Skipped" },
                 ].map((item) => (
-                  <View style={styles.medicationStat} key={item.label}>
-                    <Text style={styles.medicationStatValue}>{item.stat}</Text>
-                    <Text style={styles.medicationStatLabel}>{item.label}</Text>
+                  <View style={styles.medStatItem} key={item.label}>
+                    <Text style={styles.medStatValue}>{item.stat}</Text>
+                    <Text style={styles.medStatLabel}>{item.label}</Text>
                   </View>
                 ))}
               </View>
@@ -300,149 +232,147 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background.secondary },
+  container: { flex: 1, backgroundColor: COLORS.background.primary },
   scrollView: { flex: 1 },
   scrollContent: { paddingBottom: 100 },
   header: { paddingHorizontal: DIMS.PADDING, paddingVertical: 20 },
-  title: { fontSize: FONTS.size.huge, fontWeight: "bold", color: COLORS.black },
+  title: { fontSize: 26, fontWeight: "700", color: COLORS.primaryDark },
+
+  // Timeframe
   timeframeContainer: {
     flexDirection: "row",
     paddingHorizontal: DIMS.PADDING,
     marginBottom: 20,
-    gap: 12,
+    gap: 8,
   },
   timeframeButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.white,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: COLORS.gray.lightest,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
     alignItems: "center",
   },
-  timeframeButtonActive: { backgroundColor: COLORS.primary },
-  timeframeText: { fontSize: FONTS.size.medium, color: COLORS.gray.dark, fontWeight: "500" },
-  timeframeTextActive: { color: COLORS.white, fontWeight: "600" },
-  overallCard: {
-    marginHorizontal: DIMS.PADDING,
-    marginBottom: 20,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  timeframeButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
-  overallHeader: {
+  timeframeText: { fontSize: FONTS.size.small, color: COLORS.gray.medium, fontWeight: "500" },
+  timeframeTextActive: { color: COLORS.white, fontWeight: "600" },
+
+  // Cards
+  card: {
+    marginHorizontal: DIMS.PADDING,
+    marginBottom: 16,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
+  },
+  cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 16,
+    gap: 10,
   },
-  overallTitle: { fontSize: FONTS.size.large, fontWeight: "600", color: COLORS.black },
-  adherenceLabel: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  adherenceLabelText: { fontSize: FONTS.size.small, fontWeight: "600" },
-  circularProgress: { alignItems: "center", marginVertical: 20 },
-  percentageText: { fontSize: 48, fontWeight: "bold" },
-  percentageLabel: { fontSize: FONTS.size.medium, color: COLORS.gray.medium, marginTop: 8 },
-  statsRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 20 },
-  statItem: { alignItems: "center", gap: 8 },
-  statValue: { fontSize: FONTS.size.large, fontWeight: "600", color: COLORS.black },
-  statLabel: { fontSize: FONTS.size.small, color: COLORS.gray.medium },
-  streakContainer: {
+  cardTitle: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark, flex: 1 },
+
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  badgeText: { fontSize: FONTS.size.small, fontWeight: "600" },
+
+  // Rate
+  rateSection: { alignItems: "center", marginBottom: 20 },
+  rateText: { fontSize: 44, fontWeight: "700" },
+  rateLabel: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginTop: 4 },
+
+  // Stats
+  statsRow: { flexDirection: "row", justifyContent: "space-around" },
+  statItem: { alignItems: "center", gap: 6 },
+  statIconBg: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statValue: { fontSize: FONTS.size.large, fontWeight: "600", color: COLORS.primaryDark },
+  statLabel: { fontSize: FONTS.size.tiny, color: COLORS.gray.medium },
+
+  // Streak
+  streakRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 20,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: COLORS.warning + "10",
-    borderRadius: 12,
-    gap: 8,
+    marginTop: 16,
+    paddingVertical: 10,
+    backgroundColor: COLORS.tint.peach,
+    borderRadius: 10,
+    gap: 6,
   },
-  streakText: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.warning },
-  sectionHeader: {
+  streakText: { fontSize: FONTS.size.small, fontWeight: "600", color: COLORS.warning },
+
+  // Section
+  sectionIconBg: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sectionRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: DIMS.PADDING,
     marginBottom: 12,
-    gap: 8,
+    gap: 10,
   },
-  sectionTitle: { fontSize: FONTS.size.large, fontWeight: "600", color: COLORS.black },
-  insightsCard: {
-    marginHorizontal: DIMS.PADDING,
-    marginBottom: 16,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 16,
-  },
-  insightsSubtitle: {
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-    color: COLORS.black,
-    marginBottom: 12,
-  },
-  insightRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12, gap: 8 },
-  insightText: { flex: 1, fontSize: FONTS.size.small, color: COLORS.gray.dark, lineHeight: 20 },
-  suggestionRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 12, gap: 8 },
-  suggestionText: { flex: 1, fontSize: FONTS.size.small, color: COLORS.gray.dark, lineHeight: 20 },
-  encouragementCard: {
+  sectionTitle: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
+
+  // Patterns
+  patternGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  patternItem: {
+    width: "50%",
+    paddingVertical: 10,
     alignItems: "center",
-    marginHorizontal: DIMS.PADDING,
-    marginBottom: 20,
-    backgroundColor: COLORS.success + "10",
-    borderRadius: 16,
-    padding: 16,
-    gap: 12,
   },
-  encouragementText: {
-    flex: 1,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.dark,
-    lineHeight: 22,
-  },
-  patternCard: {
+  patternLabel: { fontSize: FONTS.size.tiny, color: COLORS.gray.medium, marginBottom: 4 },
+  patternValue: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
+
+  // Medication Cards
+  medCard: {
     marginHorizontal: DIMS.PADDING,
-    marginBottom: 20,
+    marginBottom: 10,
     backgroundColor: COLORS.white,
-    borderRadius: 16,
-    padding: 20,
-  },
-  patternRow: { flexDirection: "row" },
-  patternItem: { flex: 1, alignItems: "center", gap: 8 },
-  patternLabel: { fontSize: FONTS.size.small, color: COLORS.gray.medium },
-  patternValue: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.black },
-  patternDivider: { width: 1, backgroundColor: COLORS.gray.light, marginHorizontal: 16 },
-  patternDividerHorizontal: { height: 1, backgroundColor: COLORS.gray.light, marginVertical: 20 },
-  medicationCard: {
-    marginHorizontal: DIMS.PADDING,
-    marginBottom: 12,
-    backgroundColor: COLORS.white,
-    borderRadius: 16,
+    borderRadius: 14,
     padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
   },
-  medicationHeader: {
+  medHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
-  medicationInfo: { flex: 1 },
-  medicationName: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.black },
-  medicationDosage: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginTop: 2 },
-  medicationRate: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  medicationRateText: { fontSize: FONTS.size.medium, fontWeight: "600" },
+  medInfo: { flex: 1 },
+  medName: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
+  medDosage: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginTop: 2 },
   progressBar: {
-    height: 8,
+    height: 6,
     backgroundColor: COLORS.gray.lightest,
-    borderRadius: 4,
+    borderRadius: 3,
     overflow: "hidden",
     marginBottom: 12,
   },
-  progressFill: { height: "100%", borderRadius: 4 },
-  medicationStats: { flexDirection: "row", justifyContent: "space-around" },
-  medicationStat: { alignItems: "center" },
-  medicationStatValue: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.black },
-  medicationStatLabel: { fontSize: FONTS.size.tiny, color: COLORS.gray.medium, marginTop: 4 },
+  progressFill: { height: "100%", borderRadius: 3 },
+  medStatsRow: { flexDirection: "row", justifyContent: "space-around" },
+  medStatItem: { alignItems: "center" },
+  medStatValue: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
+  medStatLabel: { fontSize: FONTS.size.tiny, color: COLORS.gray.medium, marginTop: 2 },
 });
