@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,16 +15,12 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
 
   const { medications } = useMedications();
   const { getOverallStats, getMedicationStats, refetch } = useAdherence(selectedTimeframe);
-  const { insights: patterns, analyzePatterns } = useBehaviorAnalysis();
-
-  useEffect(() => {
-    analyzePatterns(selectedTimeframe);
-  }, [selectedTimeframe]);
+  const { insights: patterns, analyzePatterns } = useBehaviorAnalysis(selectedTimeframe);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await refetch();
-    await analyzePatterns(selectedTimeframe);
+    await analyzePatterns();
     setRefreshing(false);
   };
 
