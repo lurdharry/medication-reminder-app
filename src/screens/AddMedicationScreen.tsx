@@ -5,7 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { format } from "date-fns";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import * as ImagePicker from "expo-image-picker";
 
@@ -36,7 +37,6 @@ export const AddMedicationScreen: React.FC = () => {
   const isEditing = !!medicationId;
   const existingMed = isEditing ? medications.find((m) => m.id === medicationId) : null;
 
-  // Form state
   const [name, setName] = useState(existingMed?.name || "");
   const [dosage, setDosage] = useState(existingMed?.dosage.toString() || "");
   const [unit, setUnit] = useState<"mg" | "ml" | "pills">(existingMed?.unit || "mg");
@@ -55,8 +55,6 @@ export const AddMedicationScreen: React.FC = () => {
   useEffect(() => {
     if (isEditing) {
       speak(`Editing ${existingMed?.name}`);
-    } else {
-      speak("Add new medication");
     }
   }, []);
 
@@ -68,14 +66,13 @@ export const AddMedicationScreen: React.FC = () => {
 
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
     if (status !== "granted") {
       Alert.alert("Permission Denied", "We need camera roll permissions to add medication images.");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -83,24 +80,20 @@ export const AddMedicationScreen: React.FC = () => {
 
     if (!result.canceled) {
       setImageUri(result.assets[0].uri);
-      speak("Image added");
     }
   };
 
   const handleSave = async () => {
-    // Validation
     if (!name.trim()) {
       Alert.alert("Missing Information", "Please enter medication name");
       return;
     }
-
     if (!dosage.trim() || isNaN(Number(dosage))) {
       Alert.alert("Invalid Dosage", "Please enter a valid dosage amount");
       return;
     }
-
     if (selectedTimes.length === 0) {
-      Alert.alert("No Schedule", "Please select at least one time to take this medication");
+      Alert.alert("No Schedule", "Please select at least one time");
       return;
     }
 
@@ -119,33 +112,24 @@ export const AddMedicationScreen: React.FC = () => {
 
       if (isEditing) {
         await updateMedication(medicationId, medicationInput);
-        speak(`${name} updated successfully`);
+        speak(`${name} updated`);
       } else {
         await addMedication(medicationInput);
-        speak(`${name} added successfully`);
+        speak(`${name} added`);
       }
 
       navigation.goBack();
     } catch (error) {
-      console.error("Error saving medication:", error);
       Alert.alert("Error", "Failed to save medication. Please try again.");
     }
   };
 
   const handleCancel = () => {
     if (name || dosage || selectedTimes.length > 0) {
-      Alert.alert(
-        "Discard Changes?",
-        "You have unsaved changes. Are you sure you want to go back?",
-        [
-          { text: "Keep Editing", style: "cancel" },
-          {
-            text: "Discard",
-            style: "destructive",
-            onPress: () => navigation.goBack(),
-          },
-        ]
-      );
+      Alert.alert("Discard Changes?", "You have unsaved changes.", [
+        { text: "Keep Editing", style: "cancel" },
+        { text: "Discard", style: "destructive", onPress: () => navigation.goBack() },
+      ]);
     } else {
       navigation.goBack();
     }
@@ -159,23 +143,15 @@ export const AddMedicationScreen: React.FC = () => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleCancel}
-            accessibilityLabel="Cancel"
-          >
-            <Ionicons name="close" size={28} color={COLORS.gray.dark} />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>{isEditing ? "Edit Medication" : "Add Medication"}</Text>
-
-          <TouchableOpacity
-            style={styles.headerButton}
-            onPress={handleSave}
-            accessibilityLabel="Save medication"
-          >
+          <Pressable style={styles.headerBtn} onPress={handleCancel}>
+            <Ionicons name="close" size={24} color={COLORS.gray.dark} />
+          </Pressable>
+          <Text style={styles.headerTitle}>
+            {isEditing ? "Edit Medication" : "Add Medication"}
+          </Text>
+          <Pressable style={styles.headerBtn} onPress={handleSave}>
             <Text style={styles.saveText}>Save</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         <ScrollView
@@ -183,25 +159,19 @@ export const AddMedicationScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Image Section */}
-          <View style={styles.imageSection}>
-            <TouchableOpacity
-              style={styles.imagePicker}
-              onPress={handlePickImage}
-              accessibilityLabel="Add medication image"
-            >
-              {imageUri ? (
-                <Image source={{ uri: imageUri }} style={styles.medicationImage} />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="camera" size={40} color={COLORS.gray.medium} />
-                  <Text style={styles.imageText}>Add Photo</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+          {/* Image */}
+          <Pressable style={styles.imagePicker} onPress={handlePickImage}>
+            {imageUri ? (
+              <Image source={{ uri: imageUri }} style={styles.medicationImage} />
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <Ionicons name="camera" size={28} color={COLORS.gray.medium} />
+                <Text style={styles.imageText}>Add Photo</Text>
+              </View>
+            )}
+          </Pressable>
 
-          {/* Basic Information */}
+          {/* Basic Info */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Basic Information</Text>
 
@@ -212,10 +182,7 @@ export const AddMedicationScreen: React.FC = () => {
                 value={name}
                 onChangeText={setName}
                 placeholder="e.g., Metformin"
-                placeholderTextColor={COLORS.gray.medium}
-                autoCapitalize="words"
-                returnKeyType="next"
-                accessibilityLabel="Medication name"
+                placeholderTextColor={COLORS.gray.light}
               />
             </View>
 
@@ -227,10 +194,8 @@ export const AddMedicationScreen: React.FC = () => {
                   value={dosage}
                   onChangeText={setDosage}
                   placeholder="500"
-                  placeholderTextColor={COLORS.gray.medium}
+                  placeholderTextColor={COLORS.gray.light}
                   keyboardType="numeric"
-                  returnKeyType="next"
-                  accessibilityLabel="Dosage amount"
                 />
               </View>
 
@@ -238,18 +203,15 @@ export const AddMedicationScreen: React.FC = () => {
                 <Text style={styles.label}>Unit</Text>
                 <View style={styles.unitSelector}>
                   {(["mg", "ml", "pills"] as const).map((u) => (
-                    <TouchableOpacity
+                    <Pressable
                       key={u}
-                      style={[styles.unitButton, unit === u && styles.unitButtonActive]}
+                      style={[styles.unitBtn, unit === u && styles.unitBtnActive]}
                       onPress={() => setUnit(u)}
-                      accessibilityLabel={`Unit: ${u}`}
                     >
-                      <Text
-                        style={[styles.unitButtonText, unit === u && styles.unitButtonTextActive]}
-                      >
+                      <Text style={[styles.unitBtnText, unit === u && styles.unitBtnTextActive]}>
                         {u}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -262,9 +224,7 @@ export const AddMedicationScreen: React.FC = () => {
                 value={purpose}
                 onChangeText={setPurpose}
                 placeholder="e.g., Diabetes management"
-                placeholderTextColor={COLORS.gray.medium}
-                returnKeyType="next"
-                accessibilityLabel="Medication purpose"
+                placeholderTextColor={COLORS.gray.light}
               />
             </View>
 
@@ -275,11 +235,9 @@ export const AddMedicationScreen: React.FC = () => {
                 value={instructions}
                 onChangeText={setInstructions}
                 placeholder="e.g., Take with food"
-                placeholderTextColor={COLORS.gray.medium}
+                placeholderTextColor={COLORS.gray.light}
                 multiline
                 numberOfLines={3}
-                returnKeyType="done"
-                accessibilityLabel="Special instructions"
               />
             </View>
           </View>
@@ -290,69 +248,51 @@ export const AddMedicationScreen: React.FC = () => {
             <Text style={styles.sectionSubtitle}>Select times to take this medication</Text>
 
             <View style={styles.timeGrid}>
-              {MEDICATION_TIMES.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[
-                    styles.timeButton,
-                    selectedTimes.includes(time) && styles.timeButtonActive,
-                  ]}
-                  onPress={() => handleSelectTime(time)}
-                  accessibilityLabel={`${time} ${
-                    selectedTimes.includes(time) ? "selected" : "not selected"
-                  }`}
-                >
-                  <Ionicons
-                    name={selectedTimes.includes(time) ? "checkmark-circle" : "ellipse-outline"}
-                    size={24}
-                    color={selectedTimes.includes(time) ? COLORS.primary : COLORS.gray.medium}
-                  />
-                  <Text
-                    style={[
-                      styles.timeButtonText,
-                      selectedTimes.includes(time) && styles.timeButtonTextActive,
-                    ]}
+              {MEDICATION_TIMES.map((time) => {
+                const isSelected = selectedTimes.includes(time);
+                return (
+                  <Pressable
+                    key={time}
+                    style={[styles.timeBtn, isSelected && styles.timeBtnActive]}
+                    onPress={() => handleSelectTime(time)}
                   >
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Ionicons
+                      name={isSelected ? "checkmark-circle" : "ellipse-outline"}
+                      size={20}
+                      color={isSelected ? COLORS.primary : COLORS.gray.light}
+                    />
+                    <Text style={[styles.timeBtnText, isSelected && styles.timeBtnTextActive]}>
+                      {time}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
           </View>
 
-          {/* Refill Reminder */}
+          {/* Refill */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleContainer}>
+            <View style={styles.refillHeader}>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.sectionTitle}>Refill Reminder</Text>
                 <Text style={styles.sectionSubtitle}>Get notified when it's time to refill</Text>
               </View>
               <Switch
                 value={refillEnabled}
                 onValueChange={setRefillEnabled}
-                trackColor={{ false: COLORS.gray.light, true: COLORS.primary }}
+                trackColor={{ false: COLORS.gray.lighter, true: COLORS.accent }}
                 thumbColor={COLORS.white}
-                accessibilityLabel="Enable refill reminder"
               />
             </View>
 
             {refillEnabled && (
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowDatePicker(true)}
-                accessibilityLabel="Select refill date"
-              >
-                <Ionicons name="calendar" size={24} color={COLORS.primary} />
-                <Text style={styles.dateButtonText}>
-                  {refillDate.toLocaleDateString("en-US", {
-                    weekday: "short",
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
+              <Pressable style={styles.dateBtn} onPress={() => setShowDatePicker(true)}>
+                <Ionicons name="calendar" size={20} color={COLORS.primary} />
+                <Text style={styles.dateBtnText}>
+                  {format(refillDate, "EEE, MMM dd, yyyy")}
                 </Text>
-                <Ionicons name="chevron-forward" size={20} color={COLORS.gray.medium} />
-              </TouchableOpacity>
+                <Ionicons name="chevron-forward" size={18} color={COLORS.gray.light} />
+              </Pressable>
             )}
 
             {showDatePicker && (
@@ -361,17 +301,14 @@ export const AddMedicationScreen: React.FC = () => {
                 mode="date"
                 display="default"
                 minimumDate={new Date()}
-                onChange={(event, selectedDate) => {
+                onChange={(_event, selectedDate) => {
                   setShowDatePicker(Platform.OS === "ios");
-                  if (selectedDate) {
-                    setRefillDate(selectedDate);
-                  }
+                  if (selectedDate) setRefillDate(selectedDate);
                 }}
               />
             )}
           </View>
 
-          {/* Bottom Spacing */}
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -380,193 +317,119 @@ export const AddMedicationScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background.secondary,
-  },
-  keyboardView: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background.primary },
+  keyboardView: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: DIMENSIONS.PADDING_LARGE,
-    paddingVertical: DIMENSIONS.PADDING,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: DIMENSIONS.PADDING,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray.light,
+    borderBottomColor: COLORS.gray.lighter,
   },
-  headerButton: {
-    padding: 8,
-    minWidth: 60,
-  },
-  headerTitle: {
-    fontSize: FONTS.size.extraLarge,
-    fontWeight: "700",
-    color: COLORS.gray.darkest,
-  },
-  saveText: {
-    fontSize: FONTS.size.large,
-    fontWeight: "600",
-    color: COLORS.primary,
-    textAlign: "right",
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: DIMENSIONS.PADDING_LARGE,
-  },
-  imageSection: {
-    alignItems: "center",
-    paddingVertical: DIMENSIONS.SPACING.xl,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.gray.light,
-  },
+  headerBtn: { padding: 8, minWidth: 50 },
+  headerTitle: { fontSize: FONTS.size.large, fontWeight: "700", color: COLORS.primaryDark },
+  saveText: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.accent, textAlign: "right" },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: DIMENSIONS.PADDING_LARGE },
+
+  // Image
   imagePicker: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    alignSelf: "center",
+    width: 100,
+    height: 100,
+    borderRadius: 20,
     overflow: "hidden",
-    backgroundColor: COLORS.background.secondary,
-    borderWidth: 2,
-    borderColor: COLORS.gray.light,
+    backgroundColor: COLORS.gray.lightest,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
     borderStyle: "dashed",
+    marginVertical: 20,
   },
-  medicationImage: {
-    width: "100%",
-    height: "100%",
-  },
+  medicationImage: { width: "100%", height: "100%" },
   imagePlaceholder: {
     width: "100%",
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
   },
-  imageText: {
-    marginTop: 8,
-    fontSize: FONTS.size.small,
-    color: COLORS.gray.medium,
-  },
+  imageText: { marginTop: 4, fontSize: FONTS.size.tiny, color: COLORS.gray.medium },
+
+  // Section
   section: {
+    marginHorizontal: DIMENSIONS.PADDING,
+    marginBottom: 16,
     backgroundColor: COLORS.white,
-    padding: DIMENSIONS.PADDING_LARGE,
-    marginTop: DIMENSIONS.PADDING,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  sectionTitleContainer: {
-    flex: 1,
-  },
-  sectionTitle: {
-    fontSize: FONTS.size.large,
-    fontWeight: "700",
-    color: COLORS.gray.darkest,
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: FONTS.size.small,
-    color: COLORS.gray.medium,
-    marginTop: 4,
-  },
-  inputGroup: {
-    marginBottom: DIMENSIONS.PADDING_LARGE,
-  },
-  label: {
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-    color: COLORS.gray.darkest,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    padding: DIMENSIONS.PADDING,
-    fontSize: FONTS.size.medium,
-    color: COLORS.gray.darkest,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.gray.light,
+    borderColor: COLORS.gray.lighter,
   },
-  textArea: {
-    height: 80,
-    textAlignVertical: "top",
+  sectionTitle: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark, marginBottom: 4 },
+  sectionSubtitle: { fontSize: FONTS.size.small, color: COLORS.gray.medium, marginBottom: 12 },
+
+  // Inputs
+  inputGroup: { marginBottom: 16 },
+  label: { fontSize: FONTS.size.small, fontWeight: "600", color: COLORS.gray.medium, marginBottom: 6 },
+  input: {
+    backgroundColor: COLORS.white,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: FONTS.size.medium,
+    color: COLORS.primaryDark,
+    borderWidth: 1,
+    borderColor: COLORS.gray.lighter,
   },
-  row: {
-    flexDirection: "row",
-    marginBottom: DIMENSIONS.PADDING_LARGE,
-  },
-  unitSelector: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  unitButton: {
+  textArea: { height: 80, textAlignVertical: "top" },
+  row: { flexDirection: "row" },
+
+  // Unit
+  unitSelector: { flexDirection: "row", gap: 6 },
+  unitBtn: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.small,
-    backgroundColor: COLORS.background.secondary,
+    borderRadius: 8,
+    backgroundColor: COLORS.gray.lightest,
     borderWidth: 1,
-    borderColor: COLORS.gray.light,
+    borderColor: COLORS.gray.lighter,
     alignItems: "center",
   },
-  unitButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  unitButtonText: {
-    fontSize: FONTS.size.small,
-    fontWeight: "600",
-    color: COLORS.gray.dark,
-  },
-  unitButtonTextActive: {
-    color: COLORS.white,
-  },
-  timeGrid: {
-    gap: 12,
-    marginTop: DIMENSIONS.PADDING,
-  },
-  timeButton: {
+  unitBtnActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  unitBtnText: { fontSize: FONTS.size.small, fontWeight: "600", color: COLORS.gray.medium },
+  unitBtnTextActive: { color: COLORS.white },
+
+  // Time
+  timeGrid: { gap: 8, marginTop: 4 },
+  timeBtn: {
     flexDirection: "row",
     alignItems: "center",
-    padding: DIMENSIONS.PADDING,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    backgroundColor: COLORS.background.secondary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.gray.light,
-    gap: 12,
+    borderColor: COLORS.gray.lighter,
+    gap: 10,
   },
-  timeButtonActive: {
-    backgroundColor: COLORS.primary + "10",
-    borderColor: COLORS.primary,
-  },
-  timeButtonText: {
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-    color: COLORS.gray.dark,
-  },
-  timeButtonTextActive: {
-    color: COLORS.primary,
-  },
-  dateButton: {
+  timeBtnActive: { borderColor: COLORS.primary, backgroundColor: COLORS.primary + "08" },
+  timeBtnText: { fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.gray.medium },
+  timeBtnTextActive: { color: COLORS.primaryDark },
+
+  // Refill
+  refillHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  dateBtn: {
     flexDirection: "row",
     alignItems: "center",
-    padding: DIMENSIONS.PADDING,
-    borderRadius: DIMENSIONS.BORDER_RADIUS.medium,
-    backgroundColor: COLORS.background.secondary,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: COLORS.white,
     borderWidth: 1,
-    borderColor: COLORS.gray.light,
-    marginTop: DIMENSIONS.PADDING,
-    gap: 12,
+    borderColor: COLORS.gray.lighter,
+    marginTop: 12,
+    gap: 10,
   },
-  dateButtonText: {
-    flex: 1,
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
-    color: COLORS.gray.darkest,
-  },
+  dateBtnText: { flex: 1, fontSize: FONTS.size.medium, fontWeight: "500", color: COLORS.primaryDark },
 });
