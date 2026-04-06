@@ -16,7 +16,6 @@ import { Formik } from "formik";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS, FONTS } from "@/constants/theme";
 import { authApi } from "@/services/api/authApi";
-import { useAuth } from "@/contexts/AuthContext";
 import { registerSchema } from "@/utils/validation/authValidation";
 import { FormInput } from "@/components/FormInput";
 import { Button } from "@/components/Button";
@@ -37,7 +36,6 @@ const initialValues: RegisterFormValues = {
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<any>();
-  const { setAuthenticated } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
 
   const handleRegister = async (values: RegisterFormValues) => {
@@ -48,13 +46,7 @@ export const RegisterScreen: React.FC = () => {
         password: values.password.trim(),
       });
 
-      const loginResponse = await authApi.login({
-        email: values.email.trim(),
-        password: values.password.trim(),
-      });
-
-      const { accessToken } = loginResponse.data.data;
-      setAuthenticated(accessToken);
+      navigation.navigate("RegisterSuccess", { email: values.email.trim() });
     } catch (error: any) {
       const message =
         error.response?.data?.message || "Registration failed. Please try again.";
