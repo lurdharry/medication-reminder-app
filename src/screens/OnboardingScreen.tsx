@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { COLORS } from "@/constants/colors";
 import { FONTS } from "@/constants/theme";
+import { Button } from "@/components/Button";
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -81,7 +82,7 @@ export const OnboardingScreen: React.FC = () => {
   const renderSlide = ({ item }: { item: OnboardingSlide }) => (
     <View style={[styles.slide, { width }]}>
       <View style={[styles.iconContainer, { backgroundColor: item.iconBg }]}>
-        <Ionicons name={item.icon} size={48} color={COLORS.primaryDark} />
+        <Ionicons name={item.icon} size={48} color={COLORS.primary} />
       </View>
       <Text style={styles.slideTitle}>{item.title}</Text>
       <Text style={styles.slideDescription}>{item.description}</Text>
@@ -147,7 +148,7 @@ export const OnboardingScreen: React.FC = () => {
                   {
                     width: dotWidth,
                     opacity: dotOpacity,
-                    backgroundColor: COLORS.primaryDark,
+                    backgroundColor: COLORS.primary,
                   },
                 ]}
               />
@@ -155,16 +156,11 @@ export const OnboardingScreen: React.FC = () => {
           })}
         </View>
 
-        <Pressable style={styles.nextButton} onPress={handleNext}>
-          <Text style={styles.nextButtonText}>
-            {isLastSlide ? "Get Started" : "Next"}
-          </Text>
-          <Ionicons
-            name={isLastSlide ? "arrow-forward" : "chevron-forward"}
-            size={18}
-            color={COLORS.white}
-          />
-        </Pressable>
+        <Button
+          title={isLastSlide ? "Get Started" : "Next"}
+          rightIcon={isLastSlide ? "arrow-forward" : "chevron-forward"}
+          onPress={handleNext}
+        />
       </View>
     </SafeAreaView>
   );
@@ -204,7 +200,7 @@ const styles = StyleSheet.create({
   slideTitle: {
     fontSize: 26,
     fontWeight: "700",
-    color: COLORS.primaryDark,
+    color: COLORS.primary,
     textAlign: "center",
     marginBottom: 16,
   },
@@ -228,19 +224,5 @@ const styles = StyleSheet.create({
   dot: {
     height: 8,
     borderRadius: 4,
-  },
-  nextButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.primaryDark,
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 8,
-  },
-  nextButtonText: {
-    color: COLORS.white,
-    fontSize: FONTS.size.medium,
-    fontWeight: "600",
   },
 });

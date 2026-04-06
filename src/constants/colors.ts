@@ -1,7 +1,7 @@
 export const COLORS = {
-  primary: "#E91E8C",
-  primaryDark: "#1B2B5E",
-  primaryLight: "#F472B6",
+  primary: "#1B2B5E",
+  primaryDark: "#111D42",
+  primaryLight: "#2A3F7E",
   accent: "#E91E8C",
 
   // Status Colors
