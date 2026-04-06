@@ -1,35 +1,27 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useMedications } from "@/hooks/useMedications";
-import { useAdherence } from "@/hooks/useAdherence";
-import useBehaviorAnalysis from "@/hooks/useBehaviorAnalysis";
 import { TimeframeSelector } from "@/components/TimeframeSelector";
 import { AdherenceOverviewCard } from "@/components/AdherenceOverviewCard";
 import { MedicationAdherenceCard } from "@/components/MedicationAdherenceCard";
-import { getAdherenceColor, getAdherenceLabel } from "@/utils/analytics";
+import { PatternsCard } from "@/components/PatternsCard";
 import { COLORS } from "@/constants/colors";
 import { DIMENSIONS as DIMS, FONTS } from "@/constants/theme";
+import { useAdherenceAnalytics } from "./useAdherenceAnalytics";
 
 export const AdherenceAnalyticsScreen: React.FC = () => {
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<number>(30);
-
-  const { medications } = useMedications();
-  const { getOverallStats, getMedicationStats, refetch } = useAdherence(selectedTimeframe);
-  const { insights: patterns, analyzePatterns } = useBehaviorAnalysis(selectedTimeframe);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    await analyzePatterns();
-    setRefreshing(false);
-  };
-
-  const overallStats = getOverallStats();
-  const adherenceColor = getAdherenceColor(overallStats.rate);
-  const adherenceLabel = getAdherenceLabel(overallStats.rate);
+  const {
+    selectedTimeframe,
+    setSelectedTimeframe,
+    refreshing,
+    handleRefresh,
+    overallStats,
+    adherenceColor,
+    adherenceLabel,
+    patternItems,
+    medicationStats,
+  } = useAdherenceAnalytics();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -62,58 +54,12 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
           />
         </View>
 
-        {/* Patterns */}
-        {patterns && (
+        {patternItems && (
           <View style={styles.section}>
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.purple }]}>
-                  <Ionicons name="analytics" size={16} color={COLORS.primaryDark} />
-                </View>
-                <Text style={styles.cardTitle}>Patterns</Text>
-              </View>
-
-              <View style={styles.patternGrid}>
-                <View style={styles.patternItem}>
-                  <Text style={styles.patternLabel}>Best Time</Text>
-                  <Text style={styles.patternValue}>
-                    {patterns.bestTimeOfDay.charAt(0).toUpperCase() + patterns.bestTimeOfDay.slice(1)}
-                  </Text>
-                </View>
-                <View style={styles.patternItem}>
-                  <Text style={styles.patternLabel}>Challenging</Text>
-                  <Text style={styles.patternValue}>
-                    {patterns.worstTimeOfDay.charAt(0).toUpperCase() + patterns.worstTimeOfDay.slice(1)}
-                  </Text>
-                </View>
-                <View style={styles.patternItem}>
-                  <Text style={styles.patternLabel}>Best Day</Text>
-                  <Text style={styles.patternValue}>{patterns.bestDayOfWeek}</Text>
-                </View>
-                <View style={styles.patternItem}>
-                  <Text style={styles.patternLabel}>Trend</Text>
-                  <Text
-                    style={[
-                      styles.patternValue,
-                      {
-                        color:
-                          patterns.adherenceTrend === "improving"
-                            ? COLORS.success
-                            : patterns.adherenceTrend === "declining"
-                              ? COLORS.error
-                              : COLORS.gray.dark,
-                      },
-                    ]}
-                  >
-                    {patterns.adherenceTrend.charAt(0).toUpperCase() + patterns.adherenceTrend.slice(1)}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <PatternsCard items={patternItems} />
           </View>
         )}
 
-        {/* By Medication */}
         <View style={styles.sectionHeader}>
           <View style={[styles.sectionIconBg, { backgroundColor: COLORS.tint.pink }]}>
             <Ionicons name="medical" size={16} color={COLORS.primaryDark} />
@@ -122,24 +68,19 @@ export const AdherenceAnalyticsScreen: React.FC = () => {
         </View>
 
         <View style={styles.section}>
-          {medications.map((medication) => {
-            const medStats = getMedicationStats(medication.id);
-            const medRate = medStats?.adherenceRate || 0;
-
-            return (
-              <MedicationAdherenceCard
-                key={medication.id}
-                name={medication.name}
-                dosage={medication.dosage}
-                unit={medication.unit}
-                rate={medRate}
-                taken={medStats?.taken || 0}
-                missed={medStats?.missed || 0}
-                skipped={medStats?.skipped || 0}
-                color={getAdherenceColor(medRate)}
-              />
-            );
-          })}
+          {medicationStats.map((med) => (
+            <MedicationAdherenceCard
+              key={med.id}
+              name={med.name}
+              dosage={med.dosage}
+              unit={med.unit}
+              rate={med.rate}
+              taken={med.taken}
+              missed={med.missed}
+              skipped={med.skipped}
+              color={med.color}
+            />
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -153,22 +94,6 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: DIMS.PADDING, paddingVertical: 20 },
   title: { fontSize: 26, fontWeight: "700", color: COLORS.primaryDark },
   section: { paddingHorizontal: DIMS.PADDING, marginBottom: 16 },
-
-  // Card
-  card: {
-    backgroundColor: COLORS.white,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.gray.lighter,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 10,
-  },
-  cardTitle: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
   sectionIconBg: {
     width: 30,
     height: 30,
@@ -184,10 +109,4 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionTitle: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
-
-  // Patterns
-  patternGrid: { flexDirection: "row", flexWrap: "wrap" },
-  patternItem: { width: "50%", paddingVertical: 10, alignItems: "center" },
-  patternLabel: { fontSize: FONTS.size.tiny, color: COLORS.gray.medium, marginBottom: 4 },
-  patternValue: { fontSize: FONTS.size.medium, fontWeight: "600", color: COLORS.primaryDark },
 });
